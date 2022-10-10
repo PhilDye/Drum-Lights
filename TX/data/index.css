@@ -1,0 +1,64 @@
+html {
+    font-family: Helvetica, sans-serif;
+    display: inline-block;
+    margin: 0px auto;
+    text-align: center;
+    background-color: #444444;
+}
+
+body {
+    margin-top: 20px;
+}
+
+h1 {
+    color: #eeeeee;
+    margin: 10px auto 10px;
+    font-size: 110%;
+}
+
+h3 {
+    color: #eeeeee;
+    margin: 0 auto 10px auto;
+    font-size: 25px
+}
+
+p {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.button {
+    display: block;
+    width: 85px;
+    background-color: #34495e;
+    border: none;
+    color: white;
+    padding: 15px 13px;
+    text-decoration: none;
+    font-size: 22 px;
+    margin: 0px auto 15px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.buttonactive {
+    background-color: #3498db;
+}
+
+.col {
+    float: left;
+    width: 33%;
+    margin: 0px auto;
+}
+
+.row {
+    float: left;
+    width: 100%;
+    margin: 0px auto;
+}
+
+.row .button {
+    float: left;
+    margin-right: 8px;
+}

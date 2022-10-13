@@ -35,7 +35,7 @@ DNSServer dnsServer;
 #define NRF24L01_PIN_CE 17
 #define NRF24L01_PIN_CS 5
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
-const byte address[6] = "00001";
+const byte address[5] = {'R','x','A','A','1'};
 
 uint8_t LEDMode = 0;
 

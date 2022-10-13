@@ -52,6 +52,8 @@ uint8_t max_bright = 255;   // Overall brightness definition, could be changed o
 struct CRGB leds[NUM_LEDS]; // The array of leds, one for each led in the strip
 uint8_t ledMode = 0;        // The currently active pattern
 
+void(* resetFunc) (void) = 0; //declare reset function @ address 0
+
 void allOff(CRGB leds[])
 {
   fill_solid(leds, NUM_LEDS, CRGB::Black);
@@ -131,11 +133,24 @@ void setup()
   if (!radio.begin())
   {
     Serial.println(F("radio hardware is not responding!!"));
-    fill_solid(leds, 1, CRGB::Red);
-    FastLED.show();
-    while (1)
+    for (size_t i = 0; i < 5; i++)
     {
-    } // hold in infinite loop
+      // flashing red
+      showStatus(leds, CRGB::Red);
+    FastLED.show();
+      delay(250);
+      allOff(leds);
+      FastLED.show();
+      delay(250);
+      showStatus(leds, CRGB::Red);
+      FastLED.show();
+      delay(250);
+      allOff(leds);
+      FastLED.show();
+      delay(250);
+    }
+
+    resetFunc();
   }
 
   radio.openReadingPipe(1, address);

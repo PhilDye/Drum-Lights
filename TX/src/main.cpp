@@ -156,6 +156,10 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
         Serial.printf("LEDMode set to #%d\n", LEDMode);
 
         radio.write(&LEDMode, sizeof(mode));
+        delay(10);
+        radio.write(&LEDMode, sizeof(mode));
+        delay(10);
+        radio.write(&LEDMode, sizeof(mode));
         notifyClients();
 
     }

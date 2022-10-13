@@ -198,6 +198,8 @@ void loop()
   }
 #endif
 
+  uint8_t currentMode = ledMode;
+
   readRadio();
 
   EVERY_N_MILLISECONDS(1000 / FRAMES_PER_SECOND)
@@ -283,6 +285,13 @@ void loop()
     case 93:
       rioFlag(leds, NUM_LEDS);
       break;
+
+    case 98:
+      // quick white strobe - flashes multiple times because TX resends mode 3 times :-|
+      fill_solid(leds, NUM_LEDS, CRGB::White);
+      FastLED.show();
+      delay(50);
+      ledMode = currentMode;
 
     case 99:
       rainbow(leds, NUM_LEDS);

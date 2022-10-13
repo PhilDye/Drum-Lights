@@ -40,7 +40,7 @@ AsyncWebServer server(80);
 #define NRF24L01_PIN_CE 4
 #define NRF24L01_PIN_CS 15
 struct RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
-const byte address[6] = "00001";
+const byte address[5] = {'R','x','A','A','1'};
 
 // Setup the LEDs
 #define NUM_LEDS 105 // TODO Change this for each drum size
@@ -154,8 +154,9 @@ void setup()
   }
 
   radio.openReadingPipe(1, address);
+  radio.setAutoAck(false);
   radio.startListening(); // put radio in TX mode
-  // radio.printPrettyDetails();  // (larger) function that prints human readable data
+  radio.printPrettyDetails();  // (larger) function that prints human readable data
   Serial.println("Done");
 
   Serial.print("Ready...");

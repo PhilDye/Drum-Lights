@@ -43,7 +43,7 @@ struct RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R','x','A','A','1'};
 
 // Setup the LEDs
-#define NUM_LEDS 105 // TODO Change this for each drum size
+#define NUM_LEDS 104    // TODO Change this for each drum size
 #define DATA_PIN 2
 #define VOLTS 5
 #define MAX_MA 2000
@@ -61,7 +61,7 @@ void allOff(CRGB leds[])
 void showStatus(CRGB leds[], CRGB color)
 {
   allOff(leds);
-  fill_solid(leds, 1, color);
+  leds[1] = color;
 }
 
 #include "prototypes.h"
@@ -137,7 +137,7 @@ void setup()
     {
       // flashing red
       showStatus(leds, CRGB::Red);
-    FastLED.show();
+      FastLED.show();
       delay(250);
       allOff(leds);
       FastLED.show();
@@ -197,7 +197,7 @@ void loop()
     MDNS.update();
   }
 #endif
-
+  
   uint8_t currentMode = ledMode;
 
   readRadio();

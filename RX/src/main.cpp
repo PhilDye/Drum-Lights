@@ -286,6 +286,10 @@ void loop()
       rioFlag(leds, NUM_LEDS);
       break;
 
+    case 97:
+      hazards(leds, NUM_LEDS);
+      break;
+
     case 98:
       // quick white strobe - flashes multiple times because TX resends mode 3 times :-|
       fill_solid(leds, NUM_LEDS, CRGB::White);

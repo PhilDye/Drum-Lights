@@ -20,5 +20,11 @@ void rioSpin(CRGB leds[], int numLeds);
 void rioDisco(CRGB leds[], int numLeds);
 void rioFlag(CRGB leds[], int numLeds);
 
+// 97
+void hazards(CRGB leds[], int numLeds);
+
+// 98
+// strobe
 // 99
 void rainbow(CRGB leds[], int numLeds);
+

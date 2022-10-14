@@ -7,7 +7,7 @@ void allBlue(CRGB leds[], int numLeds);
 void allRed(CRGB leds[], int numLeds);
 void allWhite(CRGB leds[], int numLeds);
 void allCyan(CRGB leds[], int numLeds);
-void allMagenta(CRGB leds[], int numLeds);
+void allPink(CRGB leds[], int numLeds);
 
 // 11-17    // green, yellow, blue, red, white, cyan, magenta
 void chase(CRGB color, CRGB leds[], int numLeds);

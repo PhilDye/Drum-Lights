@@ -71,7 +71,7 @@ void rioDisco(CRGB leds[], int numLeds)
         }
         //leds[lastPixel] = CRGB::White;
     }
-    FastLED.delay(10);     // slow things down
+    //FastLED.delay(10);     // slow things down
 
 }
 
@@ -162,7 +162,7 @@ void colorTwinkle(CRGB color, CRGB leds[], int numLeds)
         }
         //leds[lastPixel] = CRGB::White;
     }
-    FastLED.delay(10);     // slow things down
+    //FastLED.delay(10);     // slow things down
 
 }
 

@@ -229,7 +229,7 @@ void loop()
       allCyan(leds, NUM_LEDS);
       break;
     case 7:
-      allMagenta(leds, NUM_LEDS);
+      allPink(leds, NUM_LEDS);
       break;
 
     case 11:
@@ -290,8 +290,10 @@ void loop()
       // quick white strobe - flashes multiple times because TX resends mode 3 times :-|
       fill_solid(leds, NUM_LEDS, CRGB::White);
       FastLED.show();
-      delay(50);
-      ledMode = currentMode;
+      FastLED.delay(30);
+      FastLED.clear();
+      ledMode = currentMode;    // reinstate the previous mode
+      break;
 
     case 99:
       rainbow(leds, NUM_LEDS);

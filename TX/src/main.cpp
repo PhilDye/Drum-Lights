@@ -153,6 +153,11 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
 
         Serial.printf("Received mode #%4ld\n", mode);
 
+        if (LEDMode == (int)mode) {
+          // existing mode, so toggle off
+          mode = 0;
+        }
+
         LEDMode = (int)mode;
 
         Serial.printf("LEDMode set to #%d\n", LEDMode);

@@ -147,7 +147,9 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
             return;
         }
 
-        const long mode = json["mode"];
+        uint8_t currentMode = LEDMode;
+
+        long mode = json["mode"];
 
         Serial.printf("Received mode #%4ld\n", mode);
 
@@ -160,8 +162,13 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
         radio.write(&LEDMode, sizeof(mode));
         delay(10);
         radio.write(&LEDMode, sizeof(mode));
-        notifyClients();
 
+        if (mode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
+          LEDMode = currentMode;
+          Serial.printf("LEDMode reverted to #%d\n", LEDMode);
+        }
+
+        notifyClients();
     }
 }
 

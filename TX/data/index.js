@@ -36,7 +36,7 @@ $(document).ready(function(){
 
     initWebSocket();
 
-    $('.button').click(function() {
+    $('.mode').click(function() {
         var mode = $(this).data("mode");
 
         // send to the websocket

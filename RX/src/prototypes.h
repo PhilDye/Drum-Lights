@@ -7,7 +7,7 @@ void allBlue(CRGB leds[], int numLeds);
 void allRed(CRGB leds[], int numLeds);
 void allWhite(CRGB leds[], int numLeds);
 void allCyan(CRGB leds[], int numLeds);
-void allMagenta(CRGB leds[], int numLeds);
+void allPink(CRGB leds[], int numLeds);
 
 // 11-17    // green, yellow, blue, red, white, cyan, magenta
 void chase(CRGB color, CRGB leds[], int numLeds);
@@ -20,5 +20,11 @@ void rioSpin(CRGB leds[], int numLeds);
 void rioDisco(CRGB leds[], int numLeds);
 void rioFlag(CRGB leds[], int numLeds);
 
+// 97
+void hazards(CRGB leds[], int numLeds);
+
+// 98
+// strobe
 // 99
 void rainbow(CRGB leds[], int numLeds);
+

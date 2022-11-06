@@ -71,7 +71,7 @@ void rioDisco(CRGB leds[], int numLeds)
         }
         //leds[lastPixel] = CRGB::White;
     }
-    FastLED.delay(10);     // slow things down
+    //FastLED.delay(10);     // slow things down
 
 }
 
@@ -162,7 +162,7 @@ void colorTwinkle(CRGB color, CRGB leds[], int numLeds)
         }
         //leds[lastPixel] = CRGB::White;
     }
-    FastLED.delay(10);     // slow things down
+    //FastLED.delay(10);     // slow things down
 
 }
 
@@ -170,4 +170,25 @@ void rainbow(CRGB leds[], int numLeds)
 {
     uint8_t thisHue = beat8(60,255);
     fill_rainbow( leds, numLeds, thisHue, 7);
+}
+
+void hazards(CRGB leds[], int numLeds)
+{
+    int quartiles = numLeds / 4;
+    const int size = 4;
+
+    EVERY_N_MILLISECONDS(1000) {
+        for (size_t i = quartiles - size/2; i < quartiles + size/2; i++)
+        {
+            leds[i] = CRGB::DarkOrange;
+        }
+        for (size_t i = 3*quartiles - size/2; i < 3*quartiles + size/2; i++)
+        {
+            leds[i] = CRGB::DarkOrange;
+        }
+        FastLED.show();
+        FastLED.delay(500);
+        FastLED.clear(true);
+    }
+
 }

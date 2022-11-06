@@ -24,7 +24,7 @@ void allCyan(CRGB leds[], int numLeds)
 {
   fill_solid(leds, numLeds, CRGB::Cyan);
 }
-void allMagenta(CRGB leds[], int numLeds)
+void allPink(CRGB leds[], int numLeds)
 {
-  fill_solid(leds, numLeds, CRGB:: Magenta);
+  fill_solid(leds, numLeds, CRGB::Purple);
 }

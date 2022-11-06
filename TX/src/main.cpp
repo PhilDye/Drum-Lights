@@ -37,6 +37,8 @@ DNSServer dnsServer;
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R','x','A','A','1'};
 
+const byte RETRANSMITS = 3;   // how many times we retransmit every message, for reliability in noisy RF environments
+
 uint8_t LEDMode = 0;
 
 class CaptiveRequestHandler : public AsyncWebHandler
@@ -96,7 +98,7 @@ void initRadio()
 
   radio.openWritingPipe(address);
   // Set the PA Level to try preventing power supply related problems
-  radio.setPALevel(RF24_PA_HIGH); // RF24_PA_MAX is default
+  radio.setPALevel(RF24_PA_HIGH);   // RF24_PA_MAX is default
   radio.setAutoAck(false);
   radio.stopListening(); // put radio in TX mode
 
@@ -162,11 +164,11 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
 
         Serial.printf("LEDMode set to #%d\n", LEDMode);
 
-        radio.write(&LEDMode, sizeof(mode));
-        delay(10);
-        radio.write(&LEDMode, sizeof(mode));
-        delay(10);
-        radio.write(&LEDMode, sizeof(mode));
+        for (size_t i = 0; i < RETRANSMITS; i++)
+        {
+            radio.write(&LEDMode, sizeof(mode), true);
+            delay(10);
+        }
 
         if (mode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
           LEDMode = currentMode;

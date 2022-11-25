@@ -11,11 +11,13 @@ function initWebSocket() {
 
 function onOpen(event) {
     console.log('Connection opened');
+    document.getElementById("overlay").style.display = "none";
 }
 
 function onClose(event) {
     console.log('Connection closed');
-    setTimeout(initWebSocket, 2000);
+    document.getElementById("overlay").style.display = "block";
+    setTimeout(initWebSocket, 1000);
 }
 
 function onMessage(event) {

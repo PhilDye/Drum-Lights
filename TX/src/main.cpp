@@ -37,7 +37,7 @@ DNSServer dnsServer;
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R','x','A','A','1'};
 
-const byte RETRANSMITS = 3;   // how many times we retransmit every message, for reliability in noisy RF environments
+const byte RETRANSMITS = 5;   // how many times we retransmit every message, for reliability in noisy RF environments
 
 uint8_t LEDMode = 0;
 
@@ -98,7 +98,7 @@ void initRadio()
 
   radio.openWritingPipe(address);
   // Set the PA Level to try preventing power supply related problems
-  radio.setPALevel(RF24_PA_HIGH);   // RF24_PA_MAX is default
+  radio.setPALevel(RF24_PA_MAX);   // RF24_PA_MAX is default
   radio.setAutoAck(false);
   radio.stopListening(); // put radio in TX mode
 

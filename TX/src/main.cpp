@@ -20,6 +20,8 @@
 #include <SPIFFS.h>
 #include <ArduinoJson.h>
 
+#include <millisDelay.h>
+
 // Setup the network
 const char *ssid = WIFI_SSID;     // Set in build environment
 const char *password = WIFI_PASS; // Set in build environment
@@ -39,7 +41,17 @@ const byte address[5] = {'R','x','A','A','1'};
 
 const byte RETRANSMITS = 5;   // how many times we retransmit every message, for reliability in noisy RF environments
 
-uint8_t LEDMode = 0;
+int CurrentMode = 0;
+
+const unsigned long AUTO_TIME = 30000; // in mS 
+const int AUTO_MODE = -1;
+millisDelay autoDelay; // the delay object
+
+const int autoModes[21] = {
+      1,2,3,4,5,6,7,
+      11,12,13,14,15,16,17,
+      81,82,83,84,85,86,87 
+    };
 
 class CaptiveRequestHandler : public AsyncWebHandler
 {
@@ -129,11 +141,21 @@ void initWebServer()
 void notifyClients() {
     const size_t size = JSON_OBJECT_SIZE(1);
     StaticJsonDocument<size> json;
-    json["mode"] = LEDMode;
+    json["mode"] = CurrentMode;
 
     char msg[32];
     size_t len = serializeJson(json, msg);
     ws.textAll(msg, len);
+}
+
+void broadcast()
+{
+    for (size_t i = 0; i < RETRANSMITS; i++)
+    {
+        radio.write(&CurrentMode, sizeof(CurrentMode), true);
+        delay(10);
+    }
+    Serial.printf("CurrentMode #%d broadcasted\n", CurrentMode);
 }
 
 void handleMessage(void *arg, uint8_t *data, size_t len) {
@@ -149,30 +171,34 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
             return;
         }
 
-        uint8_t currentMode = LEDMode;
+        int previousMode = CurrentMode;
 
-        long mode = json["mode"];
+        int newMode = json["mode"];
 
-        Serial.printf("Received mode #%4ld\n", mode);
+        Serial.printf("Received mode #%d\n", newMode);
 
-        // if (LEDMode == (int)mode) {
-        //   // existing mode, so toggle off
-        //   mode = 0;
-        // }
+        if (newMode == AUTO_MODE) {    // auto
+          Serial.printf("AUTO mode set ON\n");
 
-        LEDMode = (int)mode;
-
-        Serial.printf("LEDMode set to #%d\n", LEDMode);
-
-        for (size_t i = 0; i < RETRANSMITS; i++)
+          // set a random mode
+          newMode = autoModes[random(21)];
+          Serial.printf("CurrentMode randomised to #%d\n", newMode);
+          autoDelay.start(AUTO_TIME);
+        }
+        else if(CurrentMode = AUTO_MODE)
         {
-            radio.write(&LEDMode, sizeof(mode), true);
-            delay(10);
+          autoDelay.stop();
+          Serial.printf("AUTO mode set OFF\n");
         }
 
-        if (mode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
-          LEDMode = currentMode;
-          Serial.printf("LEDMode reverted to #%d\n", LEDMode);
+        CurrentMode = newMode;
+        Serial.printf("CurrentMode set to #%d\n", CurrentMode);
+
+        broadcast();
+
+        if (newMode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
+          CurrentMode = previousMode;
+          Serial.printf("CurrentMode reverted to #%d\n", previousMode);
         }
 
         notifyClients();
@@ -247,4 +273,17 @@ void loop()
 {
   dnsServer.processNextRequest();
   ws.cleanupClients();
+
+  if (autoDelay.justFinished()) {
+
+    // set a random mode
+    CurrentMode = autoModes[random(21)];
+    Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
+
+    broadcast();
+    notifyClients();
+
+    autoDelay.repeat(); // repeat
+    Serial.println("autoDelay restarted" );
+  }
 }

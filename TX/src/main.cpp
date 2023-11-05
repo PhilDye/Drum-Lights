@@ -59,12 +59,12 @@ public:
     response->print("<!DOCTYPE html <html>");
     response->print("<head>");
     response->print("<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>");
-    response->print("<title>Drum LED Control</title>");
+    response->print("<title>Drum LEDs Control</title>");
     response->print("<link rel='stylesheet' href='/index.css' />");
     response->print("</head>");
     response->print("<body>");
-    response->print("<h1>Drum LED Control</h1>");
-    response->printf("<p style='color:white'><a href='http://%s' style='color:white'>Open LED Control</a></p>", WiFi.softAPIP().toString().c_str());
+    response->print("<h1>Drum LEDs</h1>");
+    response->printf("<p style='color:white'><a href='http://%s' style='color:white'>Open Drum LEDs</a></p>", WiFi.softAPIP().toString().c_str());
     response->print("</body></html>");
     request->send(response);  
   }

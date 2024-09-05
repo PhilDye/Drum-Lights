@@ -349,6 +349,10 @@ void loop()
       rainbow(leds, NUM_LEDS);
       break;
 
+    case 199:
+      nineninenine(leds, NUM_LEDS);
+      break;
+
     default:
       showStatus(leds, CRGB::HotPink);
     }

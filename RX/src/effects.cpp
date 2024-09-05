@@ -192,3 +192,49 @@ void hazards(CRGB leds[], int numLeds)
     }
 
 }
+
+void nineninenine(CRGB leds[], int numLeds)
+{
+    size_t quarter = numLeds / 4;
+
+    const int flashes = 3;
+
+    for (size_t f = 0; f < flashes; f++)
+    {
+        // quadrant 1
+        for (size_t i = 0; i < quarter; i++)
+        {
+            leds[i] = CRGB::Blue;
+        }
+        // quadrant 3
+        for (size_t i = 2 * quarter; i < 3*quarter; i++)
+        {
+            leds[i] = CRGB::Blue;
+        }
+        FastLED.show();
+        FastLED.delay(25);
+        FastLED.clear(true);
+        FastLED.delay(25);
+    }
+    FastLED.delay(200);
+
+    for (size_t f = 0; f < flashes; f++)
+    {
+        // quadrant 2
+        for (size_t i = quarter; i < 2*quarter; i++)
+        {
+            leds[i] = CRGB::Blue;
+        }
+        // quadrant 4
+        for (size_t i = 3 * quarter; i < numLeds; i++)
+        {
+            leds[i] = CRGB::Blue;
+        }
+        FastLED.show();
+        FastLED.delay(25);
+        FastLED.clear(true);
+        FastLED.delay(25);
+    }
+    FastLED.delay(200);
+
+}

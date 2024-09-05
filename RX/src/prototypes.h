@@ -25,6 +25,9 @@ void hazards(CRGB leds[], int numLeds);
 
 // 98
 // strobe
+
 // 99
 void rainbow(CRGB leds[], int numLeds);
 
+// 199 blue strobe
+void nineninenine(CRGB leds[], int numLeds);

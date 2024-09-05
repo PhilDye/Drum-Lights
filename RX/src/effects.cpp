@@ -174,8 +174,8 @@ void rainbow(CRGB leds[], int numLeds)
 
 void hazards(CRGB leds[], int numLeds)
 {
-    int quartiles = numLeds / 4;
-    const int size = 4;
+    size_t quartiles = numLeds / 4;
+    const size_t size = 4;
 
     EVERY_N_MILLISECONDS(1000) {
         for (size_t i = quartiles - size/2; i < quartiles + size/2; i++)

@@ -38,9 +38,6 @@ void rioSpin(CRGB leds[], int numLeds)
 
 void rioDisco(CRGB leds[], int numLeds)
 {
-    // Add entropy to random number generator; we use a lot of it.
-    random16_add_entropy( random(65536));
-
     static uint8_t activePixels = numLeds / 20;     // controls density of lit pixels
     static uint16_t lastPixel = 0;
 

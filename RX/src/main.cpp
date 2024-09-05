@@ -58,13 +58,9 @@ long NUM_LEDS = MAX_LEDS;  // To be read from config later
 
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
 
-void allOff(CRGB leds[])
-{
-  fill_solid(leds, NUM_LEDS, CRGB::Black);
-}
 void showStatus(CRGB leds[], CRGB color)
 {
-  allOff(leds);
+  FastLED.clear();
   leds[1] = color;
 }
 
@@ -124,10 +120,10 @@ void setup()
   }
 
   Serial.print("Setting up LEDs... ");
-  LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
+  LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );;
   FastLED.setBrightness(max_bright);
   FastLED.setMaxPowerInVoltsAndMilliamps(VOLTS, MAX_MA);
-  allOff(leds);
+  FastLED.clear();
   Serial.println("Done");
 
   Serial.printf("ESP8266 Chip id = %08X\n", ESP.getChipId());
@@ -183,16 +179,12 @@ void setup()
     {
       // flashing red
       showStatus(leds, CRGB::Red);
-      FastLED.show();
       delay(250);
-      allOff(leds);
-      FastLED.show();
+      FastLED.clear(true);
       delay(250);
       showStatus(leds, CRGB::Red);
-      FastLED.show();
       delay(250);
-      allOff(leds);
-      FastLED.show();
+      FastLED.clear(true);
       delay(250);
     }
 
@@ -244,14 +236,15 @@ void loop()
   }
 #endif
   
+  // Add entropy to random number generator; we use a lot of it
+  random16_add_entropy(random());
+
   uint8_t currentMode = ledMode;
 
   readRadio();
 
-  EVERY_N_MILLISECONDS(1000 / FRAMES_PER_SECOND)
+  switch (ledMode)
   {
-    switch (ledMode)
-    {
     case 0:
       showStatus(leds, CRGB::DarkGreen);
       break;
@@ -355,9 +348,8 @@ void loop()
 
     default:
       showStatus(leds, CRGB::HotPink);
-    }
   }
 
-  // insert a delay to keep the framerate modest
+  FastLED.show(); // display this frame
   FastLED.delay(1000 / FRAMES_PER_SECOND);
 }

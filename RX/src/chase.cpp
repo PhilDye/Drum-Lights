@@ -1,6 +1,6 @@
 #include <FastLED.h>
 
-void chase(CRGB color, CRGB leds[],  int numLeds)
+void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color)
 {
 
   static uint8_t i = 0;
@@ -8,7 +8,7 @@ void chase(CRGB color, CRGB leds[],  int numLeds)
 
   static uint8_t segmentSize = (uint8_t)numLeds / SEGMENTS;
 
-  fadeToBlackBy(leds, numLeds, 100);
+  fadeToBlackBy(targetArray, numLeds, 100);
 
   for (uint8_t s = 0; s < SEGMENTS; s++)
   {
@@ -18,7 +18,7 @@ void chase(CRGB color, CRGB leds[],  int numLeds)
       Serial.println("Busted target!! " + target);
       target = numLeds - 1;
     }
-    leds[target] = color;
+    targetArray[target] = color;
   }
 
   i++;

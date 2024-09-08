@@ -131,27 +131,25 @@ void rioFlag(CRGB leds[], int numLeds)
     {
         offset = 0;
     }
+}
 
 
 }
 
-void colorTwinkle(CRGB color, CRGB leds[], int numLeds)
+void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color)
 {
-    // Add entropy to random number generator; we use a lot of it.
-    random16_add_entropy( random(65536));
-
-    static uint8_t activePixels = numLeds / 20;     // controls density of lit pixels
-    static uint16_t lastPixel = 0;
+    static byte activePixels = numLeds / 20; // controls density of lit pixels
+    static byte lastPixel = 0;
 
     for (byte i = 0; i < activePixels; i++)
     {
         fadeToBlackBy(targetArray, numLeds, numLeds / activePixels);
 
-        leds[lastPixel] = color;
+        targetArray[lastPixel] = color;
 
         lastPixel = random8(numLeds - 1);
 
-        while (leds[lastPixel].red > 0 || leds[lastPixel].green > 0 || leds[lastPixel].blue > 0)
+        while (targetArray[lastPixel].red > 0 || targetArray[lastPixel].green > 0 || targetArray[lastPixel].blue > 0)
         {
             // pixel already lit, pick again!
             lastPixel = random8(numLeds - 1);

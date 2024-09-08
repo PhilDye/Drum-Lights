@@ -1,25 +1,26 @@
 #include <FastLED.h>
 
+// 1-7  // solid green, yellow, blue, red, white, cyan, magenta
 
 // 11-17    // green, yellow, blue, red, white, cyan, magenta
-void chase(CRGB color, CRGB leds[], int numLeds);
+void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
 
 // 81-87
-void colorTwinkle(CRGB color, CRGB leds[], int numLeds);    // green, yellow, blue, red, white, cyan, magenta
+void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
 
 // 91-93
-void rioSpin(CRGB leds[], int numLeds);
-void rioDisco(CRGB leds[], int numLeds);
-void rioFlag(CRGB leds[], int numLeds);
+void rioSpin(CRGB targetArray[], int numLeds);
+void rioDisco(CRGB targetArray[], int numLeds);
+void rioFlag(CRGB targetArray[], int numLeds);
 
 // 97
-void hazards(CRGB leds[], int numLeds);
+void hazards(CRGB targetArray[], int numLeds);
 
 // 98
 // strobe
 
 // 99
-void rainbow(CRGB leds[], int numLeds);
+void rainbow(CRGB targetArray[], int numLeds);
 
 // 199 blue strobe
-void nineninenine(CRGB leds[], int numLeds);
+void nineninenine(CRGB targetArray[], int numLeds);

@@ -220,6 +220,19 @@ void loop()
     chase(leds, numLeds, CRGB::Purple);
     break;
 
+  case 50:
+    fire(leds, numLeds, WoodFireColors_p);
+    break;
+  case 51:
+    fire(leds, numLeds, CopperFireColors_p);
+    break;
+  case 52:
+    fire(leds, numLeds, AlcoholFireColors_p);
+    break;
+  case 53:
+    fire(leds, numLeds, SodiumFireColors_p);
+    break;
+
   case 81:
     colorTwinkle(leds, numLeds, CRGB::Green);
     break;

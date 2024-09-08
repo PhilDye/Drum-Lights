@@ -184,32 +184,6 @@ void loop()
 
   switch (ledMode)
   {
-    case 0:
-      showStatus(leds, CRGB::DarkGreen);
-      break;
-
-    case 1:
-      allGreen(leds, NUM_LEDS);
-      break;
-    case 2:
-      allYellow(leds, NUM_LEDS);
-      break;
-    case 3:
-      allBlue(leds, NUM_LEDS);
-      break;
-    case 4:
-      allRed(leds, NUM_LEDS);
-      break;
-    case 5:
-      allWhite(leds, NUM_LEDS);
-      break;
-    case 6:
-      allCyan(leds, NUM_LEDS);
-      break;
-    case 7:
-      allPink(leds, NUM_LEDS);
-      break;
-
     case 11:
       chase(CRGB::Green, leds, NUM_LEDS);
       break;
@@ -287,6 +261,31 @@ void loop()
 
     default:
       showStatus(leds, CRGB::HotPink);
+  case 0:
+    showStatus(leds, CRGB::DarkGreen);
+    break;
+
+  case 1:
+    fill_solid(leds, numLeds, CRGB::Green);
+    break;
+  case 2:
+    fill_solid(leds, numLeds, CRGB::Gold);
+    break;
+  case 3:
+    fill_solid(leds, numLeds, CRGB::DarkBlue);
+    break;
+  case 4:
+    fill_solid(leds, numLeds, CRGB::Red);
+    break;
+  case 5:
+    fill_solid(leds, numLeds, CRGB::White);
+    break;
+  case 6:
+    fill_solid(leds, numLeds, CRGB::Cyan);
+    break;
+  case 7:
+    fill_solid(leds, numLeds, CRGB::Purple);
+    break;
   }
 
   FastLED.show(); // display this frame

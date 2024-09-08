@@ -18,22 +18,6 @@
 #include "FS.h"
 #include <SPIFFSIniFile.h>
 
-#ifdef ENABLEOTA
-#include <secrets.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESPAsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
-#endif
-
-#ifdef ENABLEOTA
-const char *ssid = WIFI_SSID;
-const char *password = WIFI_PASS; // Set in build environment
-uint8_t tries = 0;
-
-AsyncWebServer server(80);
-#endif
 
 #if FASTLED_VERSION < 3001000
 #error "Requires FastLED 3.1 or later; check github for latest code."
@@ -128,47 +112,10 @@ void setup()
 
   Serial.printf("ESP8266 Chip id = %08X\n", ESP.getChipId());
 
-#ifdef ENABLEOTA
-  Serial.println("Connecting to WiFi, will timeout shortly...");
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED && tries < 30)
   {
-    delay(500);
-    Serial.print(".");
-    tries++;
-  }
 
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    Serial.println();
-    Serial.print("Connected to: ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
-
-    char buffer[8];
-    sprintf(buffer, "%08X", ESP.getChipId());
-    String drumName = "drum-" + String(buffer);
-
-    if (MDNS.begin(drumName))
-    { // 'Random' hostname
-      MDNS.addService("http", "tcp", 80);
-      Serial.println("mDNS started on " + drumName);
-    }
-
-    AsyncElegantOTA.begin(&server); // Start AsyncElegantOTA
-    server.begin();
-    Serial.println("HTTP server started");
   }
   else
-  {
-    Serial.println("Timeout exceeded carrying on without WiFi");
-
-    server.end();
-  }
-#endif
 
   Serial.print("Setting up radio...");
   // initialize the transceiver on the SPI bus
@@ -228,14 +175,6 @@ void readRadio()
 
 void loop()
 {
-
-#ifdef ENABLEOTA
-  if (WiFi.status() == WL_CONNECTED)
-  {
-    MDNS.update();
-  }
-#endif
-  
   // Add entropy to random number generator; we use a lot of it
   random16_add_entropy(random());
 

@@ -10,7 +10,7 @@ void rioSpin(CRGB leds[], int numLeds)
     {
         int target = i + offset;
 
-        if (target > numLeds-1)
+        if (target > numLeds - 1)
         {
             target = target % numLeds;
         }
@@ -38,11 +38,11 @@ void rioSpin(CRGB leds[], int numLeds)
 
 void rioDisco(CRGB leds[], int numLeds)
 {
-    static uint8_t activePixels = numLeds / 20;     // controls density of lit pixels
+    static uint8_t activePixels = numLeds / 20; // controls density of lit pixels
     static uint16_t lastPixel = 0;
 
     for (uint8_t i = 0; i < activePixels; i++)
-    {    
+    {
         fadeToBlackBy(leds, numLeds, numLeds / activePixels);
 
         uint8_t c = random8(0, 3);
@@ -59,17 +59,16 @@ void rioDisco(CRGB leds[], int numLeds)
             break;
         }
 
-        lastPixel = random8(numLeds-1);
+        lastPixel = random8(numLeds - 1);
 
         while (leds[lastPixel].red > 0 || leds[lastPixel].green > 0 || leds[lastPixel].blue > 0)
         {
-            //pixel already lit, pick again!
-            lastPixel = random8(numLeds-1);
+            // pixel already lit, pick again!
+            lastPixel = random8(numLeds - 1);
         }
-        //leds[lastPixel] = CRGB::White;
+        // leds[lastPixel] = CRGB::White;
     }
-    //FastLED.delay(10);     // slow things down
-
+    // FastLED.delay(10);     // slow things down
 }
 
 void rioFlag(CRGB leds[], int numLeds)
@@ -81,7 +80,7 @@ void rioFlag(CRGB leds[], int numLeds)
     {
         int target = i + offset;
 
-        if (target > numLeds-1)
+        if (target > numLeds - 1)
         {
             target = target % numLeds;
         }

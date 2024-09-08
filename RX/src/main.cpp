@@ -27,10 +27,10 @@
 #define NRF24L01_PIN_CE 4
 #define NRF24L01_PIN_CS 15
 struct RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
-const byte address[5] = {'R','x','A','A','1'};
+const byte address[5] = {'R', 'x', 'A', 'A', '1'};
 
 // Setup the LEDs
-#define MAX_LEDS 104        // Maximum number of LEDS to initialise for
+#define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 #define DATA_PIN 2
 #define VOLTS 5
 #define MAX_MA 2000
@@ -40,7 +40,7 @@ struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
 uint8_t ledMode = 0;        // The currently active pattern
 long NUM_LEDS = MAX_LEDS;  // To be read from config later
 
-void(* resetFunc) (void) = 0; //declare reset function @ address 0
+void (*resetFunc)(void) = 0; // declare reset function @ address 0
 
 void showStatus(CRGB leds[], CRGB color)
 {
@@ -66,14 +66,15 @@ void setup()
   char buffer[bufferLen];
 
   const char *filename = "/config.ini";
-  
-  //Mount the SPIFFS  
+
+  // Mount the SPIFFS
   if (!SPIFFS.begin())
     while (1)
       Serial.println("SPIFFS.begin() failed");
   
   SPIFFSIniFile ini(filename);
-  if (!ini.open()) {
+  if (!ini.open())
+  {
     Serial.print("ini file ");
     Serial.print(filename);
     Serial.println(" does not exist");
@@ -84,7 +85,8 @@ void setup()
 
   // Check the file is valid. This can be used to warn if any lines
   // are longer than the buffer.
-  if (!ini.validate(buffer, bufferLen)) {
+  if (!ini.validate(buffer, bufferLen))
+  {
     Serial.print("ini file ");
     Serial.print(ini.getFilename());
     Serial.print(" not valid: ");
@@ -98,13 +100,15 @@ void setup()
     Serial.println(NUM_LEDS);
   }
   long drumType = 0;
-  if (ini.getValue("drum", "type", buffer, bufferLen, drumType)) {
+  if (ini.getValue("drum", "type", buffer, bufferLen, drumType))
+  {
     Serial.print("Got drum type from config: ");
     Serial.println(drumType);
   }
 
   Serial.print("Setting up LEDs... ");
-  LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );;
+  LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);
+  ;
   FastLED.setBrightness(max_bright);
   FastLED.setMaxPowerInVoltsAndMilliamps(VOLTS, MAX_MA);
   FastLED.clear();

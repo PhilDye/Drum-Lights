@@ -2,6 +2,7 @@
 
 void chase(CRGB color, CRGB leds[],  int numLeds)
 {
+
   static uint8_t i = 0;
   const uint8_t SEGMENTS = 4;
 

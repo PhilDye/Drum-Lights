@@ -143,29 +143,26 @@ void colorTwinkle(CRGB color, CRGB leds[], int numLeds)
     static uint8_t activePixels = numLeds / 20;     // controls density of lit pixels
     static uint16_t lastPixel = 0;
 
-    for (uint8_t i = 0; i < activePixels; i++)
-    {    
-        fadeToBlackBy(leds, numLeds, numLeds / activePixels);
+    for (byte i = 0; i < activePixels; i++)
+    {
+        fadeToBlackBy(targetArray, numLeds, numLeds / activePixels);
 
         leds[lastPixel] = color;
 
-        lastPixel = random8(numLeds-1);
+        lastPixel = random8(numLeds - 1);
 
         while (leds[lastPixel].red > 0 || leds[lastPixel].green > 0 || leds[lastPixel].blue > 0)
         {
-            //pixel already lit, pick again!
-            lastPixel = random8(numLeds-1);
+            // pixel already lit, pick again!
+            lastPixel = random8(numLeds - 1);
         }
-        //leds[lastPixel] = CRGB::White;
     }
-    //FastLED.delay(10);     // slow things down
-
 }
 
 void rainbow(CRGB leds[], int numLeds)
 {
-    uint8_t thisHue = beat8(60,255);
-    fill_rainbow( leds, numLeds, thisHue, 7);
+    uint8_t thisHue = beat8(60, 255);
+    fill_rainbow(leds, numLeds, thisHue, 7);
 }
 
 void hazards(CRGB leds[], int numLeds)
@@ -173,12 +170,13 @@ void hazards(CRGB leds[], int numLeds)
     size_t quartiles = numLeds / 4;
     const size_t size = 4;
 
-    EVERY_N_MILLISECONDS(1000) {
-        for (size_t i = quartiles - size/2; i < quartiles + size/2; i++)
+    EVERY_N_MILLISECONDS(1000)
+    {
+        for (size_t i = quartiles - size / 2; i < quartiles + size / 2; i++)
         {
             leds[i] = CRGB::DarkOrange;
         }
-        for (size_t i = 3*quartiles - size/2; i < 3*quartiles + size/2; i++)
+        for (size_t i = 3 * quartiles - size / 2; i < 3 * quartiles + size / 2; i++)
         {
             leds[i] = CRGB::DarkOrange;
         }
@@ -186,7 +184,6 @@ void hazards(CRGB leds[], int numLeds)
         FastLED.delay(500);
         FastLED.clear(true);
     }
-
 }
 
 void nineninenine(CRGB leds[], int numLeds)
@@ -203,7 +200,7 @@ void nineninenine(CRGB leds[], int numLeds)
             leds[i] = CRGB::Blue;
         }
         // quadrant 3
-        for (size_t i = 2 * quarter; i < 3*quarter; i++)
+        for (size_t i = 2 * quarter; i < 3 * quarter; i++)
         {
             leds[i] = CRGB::Blue;
         }
@@ -217,7 +214,7 @@ void nineninenine(CRGB leds[], int numLeds)
     for (size_t f = 0; f < flashes; f++)
     {
         // quadrant 2
-        for (size_t i = quarter; i < 2*quarter; i++)
+        for (size_t i = quarter; i < 2 * quarter; i++)
         {
             leds[i] = CRGB::Blue;
         }
@@ -232,5 +229,4 @@ void nineninenine(CRGB leds[], int numLeds)
         FastLED.delay(25);
     }
     FastLED.delay(200);
-
 }

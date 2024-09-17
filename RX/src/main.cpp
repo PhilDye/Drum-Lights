@@ -41,6 +41,7 @@ struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
 int numLeds = MAX_LEDS;    // To be read from config later
 
 int ledMode = -1; // The currently active pattern
+unsigned long IDLETIMEOUT = 30000;  // Time to wait before doing our own thing
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
 
@@ -146,7 +147,7 @@ void setup()
     radio.printPrettyDetails(); // (larger) function that prints human readable data
     Serial.print("done");
 
-    ledMode = 0;
+    ledMode = -1;
   }
   else
   {
@@ -182,12 +183,18 @@ void loop()
   // Add entropy to random number generator; we use a lot of it
   random16_add_entropy(random());
 
+  if (ledMode < 0 && millis() > IDLETIMEOUT)    // no mode set yet
+  {
+    ledMode = 13;   // chase blue
+  }
+
   int currentMode = ledMode;
 
   readRadio();
 
   switch (ledMode)
   {
+  case -1:
   case 0:
     showStatus(leds, CRGB::DarkGreen);
     break;

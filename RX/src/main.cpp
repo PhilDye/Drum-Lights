@@ -146,7 +146,7 @@ void setup()
     radio.printPrettyDetails(); // (larger) function that prints human readable data
     Serial.print("done");
 
-    ledMode = 53;
+    ledMode = 0;
   }
   else
   {

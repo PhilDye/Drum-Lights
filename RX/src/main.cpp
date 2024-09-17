@@ -40,7 +40,7 @@ byte max_bright = 255;      // Overall brightness definition, could be changed o
 struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
 int numLeds = MAX_LEDS;    // To be read from config later
 
-byte ledMode = 0; // The currently active pattern
+int ledMode = -1; // The currently active pattern
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
 
@@ -56,6 +56,18 @@ void showStatus(struct CRGB *targetArray, const struct CRGB &color)
   }
 }
 
+void showError(struct CRGB *targetArray, const struct CRGB &color)
+{
+  EVERY_N_MILLIS(300)
+  {
+    targetArray[1] = color;
+    FastLED.show();
+    FastLED.delay(150);
+    FastLED.clear(true);
+    FastLED.delay(150);
+  }
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -67,6 +79,8 @@ void setup()
 
   Serial.println("Setting up...");
 
+  #pragma region CONFIGFILE
+
   // to read config file
   const byte bufferLen = 80;
   char buffer[bufferLen];
@@ -77,8 +91,7 @@ void setup()
   if (!SPIFFS.begin())
   {
     Serial.println("SPIFFS.begin() failed");
-    showStatus(leds, CRGB::Cyan);
-    ledMode = 253;
+    ledMode = -2;
   }
 
   SPIFFSIniFile ini(filename);
@@ -87,7 +100,7 @@ void setup()
     Serial.print("ini file ");
     Serial.print(filename);
     Serial.println(" does not exist");
-    ledMode = 253;
+    ledMode = -2;
   }
 
   // Check the file is valid. This can be used to warn if any lines
@@ -97,8 +110,10 @@ void setup()
     Serial.print("ini file ");
     Serial.print(ini.getFilename());
     Serial.print(" not valid: ");
-    ledMode = 253;
+    ledMode = -2;
   }
+
+  #pragma endregion CONFIGFILE
 
   if (ini.getValue("leds", "count", buffer, bufferLen, numLeds))
   {
@@ -136,7 +151,8 @@ void setup()
   else
   {
     Serial.println(F("radio hardware is not responding!!"));
-    ledMode = 254;
+    ledMode = -3;
+    showError(leds, CRGB::Red);
   }
 }
 
@@ -166,7 +182,7 @@ void loop()
   // Add entropy to random number generator; we use a lot of it
   random16_add_entropy(random());
 
-  byte currentMode = ledMode;
+  int currentMode = ledMode;
 
   readRadio();
 
@@ -183,7 +199,7 @@ void loop()
     fill_solid(leds, numLeds, CRGB::Gold);
     break;
   case 3:
-    fill_solid(leds, numLeds, CRGB::DarkBlue);
+    fill_solid(leds, numLeds, CRGB::Blue);
     break;
   case 4:
     fill_solid(leds, numLeds, CRGB::Red);
@@ -195,7 +211,10 @@ void loop()
     fill_solid(leds, numLeds, CRGB::Cyan);
     break;
   case 7:
-    fill_solid(leds, numLeds, CRGB::Purple);
+    fill_solid(leds, numLeds, CRGB::Indigo);
+    break;
+  case 8:
+    fill_solid(leds, numLeds, CRGB::OrangeRed);
     break;
 
   case 11:
@@ -205,7 +224,7 @@ void loop()
     chase(leds, numLeds, CRGB::Gold);
     break;
   case 13:
-    chase(leds, numLeds, CRGB::DarkBlue);
+    chase(leds, numLeds, CRGB::Blue);
     break;
   case 14:
     chase(leds, numLeds, CRGB::Red);
@@ -217,7 +236,10 @@ void loop()
     chase(leds, numLeds, CRGB::Cyan);
     break;
   case 17:
-    chase(leds, numLeds, CRGB::Purple);
+    chase(leds, numLeds, CRGB::Indigo);
+    break;
+  case 18:
+    chase(leds, numLeds, CRGB::OrangeRed);
     break;
 
   case 50:
@@ -240,7 +262,7 @@ void loop()
     colorTwinkle(leds, numLeds, CRGB::Gold);
     break;
   case 83:
-    colorTwinkle(leds, numLeds, CRGB::DarkBlue);
+    colorTwinkle(leds, numLeds, CRGB::Blue);
     break;
   case 84:
     colorTwinkle(leds, numLeds, CRGB::Red);
@@ -252,7 +274,10 @@ void loop()
     colorTwinkle(leds, numLeds, CRGB::Cyan);
     break;
   case 87:
-    colorTwinkle(leds, numLeds, CRGB::Purple);
+    colorTwinkle(leds, numLeds, CRGB::Indigo);
+    break;
+  case 88:
+    colorTwinkle(leds, numLeds, CRGB::OrangeRed);
     break;
 
   case 91:
@@ -288,19 +313,19 @@ void loop()
 
 
   // ERROR MODES
-  case 253:
+  case -2:
     // file failure
-    showStatus(leds, CRGB::DarkMagenta);
+    showError(leds, CRGB::DarkMagenta);
     break;
 
-  case 254:
+  case -3:
     // radio failure
-    showStatus(leds, CRGB::Red);
+    showError(leds, CRGB::Red);
     break;
 
   default:
     // unknown mode
-    showStatus(leds, CRGB::Grey);
+    showError(leds, CRGB::DarkGray);
     break;
 
   }

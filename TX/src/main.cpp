@@ -48,9 +48,9 @@ const int AUTO_MODE = -1;
 millisDelay autoDelay; // the delay object
 
 const int autoModes[21] = {
-      1,2,3,4,5,6,7,
-      11,12,13,14,15,16,17,
-      81,82,83,84,85,86,87 
+      1,2,3,4,5,6,7,8,
+      11,12,13,14,15,16,17,18,
+      81,82,83,84,85,86,87,88
     };
 
 class CaptiveRequestHandler : public AsyncWebHandler

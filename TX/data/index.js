@@ -41,6 +41,12 @@ $(document).ready(function(){
     $('.mode').click(function() {
         var mode = $(this).data("mode");
 
+        if (mode == '199') {
+            if (!window.confirm("Activate blue strobes?")) {
+                return;
+            }
+        }
+
         // send to the websocket
         let msg = {
             mode: mode

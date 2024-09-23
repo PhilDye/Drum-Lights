@@ -18,8 +18,8 @@ h1 {
 
 h3 {
     color: #eeeeee;
-    margin: 0 auto 10px auto;
-    font-size: 25px
+    margin: 0 auto 8px auto;
+    font-size: 20px
 }
 
 p {
@@ -34,10 +34,10 @@ p {
     background-color: #34495e;
     border: none;
     color: white;
-    padding: 15px 10px;
+    padding: 14px 10px;
     text-decoration: none;
     font-size: 22 px;
-    margin: 0px auto 9px;
+    margin: 0px auto 8px;
     cursor: pointer;
     border-radius: 12px;
 }
@@ -59,9 +59,9 @@ p {
 }
 
 .row .button {
-    width: 80%;
+    width: 40%;
+    display: inline-block;
 }
-
 
 #overlay {
     position: fixed; /* Sit on top of the page content */

@@ -278,6 +278,9 @@ void loop()
   case 63:
     colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White, CRGB::Black);
     break;
+  case 68:
+    colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Green, CRGB::Black);
+    break;
 
   case 81:
     colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Black, CRGB::Black);

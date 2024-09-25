@@ -2,7 +2,7 @@
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
-void rioSpin(CRGB leds[], int numLeds)
+void rioSpin(struct CRGB *targetArray, int numLeds)
 {
     const uint8_t SEGMENTS = 3;
     uint8_t stripeLength = numLeds / SEGMENTS; // number of pixels per color
@@ -19,15 +19,15 @@ void rioSpin(CRGB leds[], int numLeds)
 
         if (i < stripeLength)
         {
-            leds[target] = CRGB::Green;
+            targetArray[target] = CRGB::Green;
         }
         else if (i < 2 * stripeLength)
         {
-            leds[target] = CRGB::Gold;
+            targetArray[target] = CRGB::Gold;
         }
         else
         {
-            leds[target] = CRGB::DarkBlue;
+            targetArray[target] = CRGB::DarkBlue;
         }
     }
 
@@ -73,7 +73,7 @@ void rioDisco(CRGB leds[], int numLeds)
     // FastLED.delay(10);     // slow things down
 }
 
-void rioFlag(CRGB leds[], int numLeds)
+void rioFlag(struct CRGB *targetArray, int numLeds)
 {
 
     static int offset = 0;
@@ -92,38 +92,38 @@ void rioFlag(CRGB leds[], int numLeds)
         case 0:
         case 1:
         case 2:
-            leds[target] = CRGB::Green;
+            targetArray[target] = CRGB::Green;
             break;
         case 3:
         case 4:
         case 5:
         case 6:
-            leds[target] = CRGB::Gold;
+            targetArray[target] = CRGB::Gold;
             break;
         case 7:
         case 8:
-            leds[target] = CRGB::DarkBlue;
+            targetArray[target] = CRGB::DarkBlue;
             break;
         case 9:
-            leds[target] = CRGB::White;
+            targetArray[target] = CRGB::White;
             break;
         case 10:
         case 11:
-            leds[target] = CRGB::DarkBlue;
+            targetArray[target] = CRGB::DarkBlue;
             break;
         case 12:
         case 13:
         case 14:
         case 15:
-            leds[target] = CRGB::Gold;
+            targetArray[target] = CRGB::Gold;
             break;
         case 16:
         case 17:
         case 18:
-            leds[target] = CRGB::Green;
+            targetArray[target] = CRGB::Green;
             break;
         default:
-            leds[target] = CRGB::Black;
+            targetArray[target] = CRGB::Black;
             break;
         }
     }
@@ -210,10 +210,10 @@ void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &colo
 void rainbow(CRGB leds[], int numLeds)
 {
     uint8_t thisHue = beat8(60, 255);
-    fill_rainbow(leds, numLeds, thisHue, 7);
+    fill_rainbow(targetArray, numLeds, thisHue, 7);
 }
 
-void hazards(CRGB leds[], int numLeds)
+void hazards(struct CRGB *targetArray, int numLeds)
 {
     size_t quartiles = numLeds / 4;
     const size_t size = 4;
@@ -222,11 +222,11 @@ void hazards(CRGB leds[], int numLeds)
     {
         for (size_t i = quartiles - size / 2; i < quartiles + size / 2; i++)
         {
-            leds[i] = CRGB::DarkOrange;
+            targetArray[i] = CRGB::DarkOrange;
         }
         for (size_t i = 3 * quartiles - size / 2; i < 3 * quartiles + size / 2; i++)
         {
-            leds[i] = CRGB::DarkOrange;
+            targetArray[i] = CRGB::DarkOrange;
         }
         FastLED.show();
         FastLED.delay(500);
@@ -234,7 +234,7 @@ void hazards(CRGB leds[], int numLeds)
     }
 }
 
-void nineninenine(CRGB leds[], int numLeds)
+void nineninenine(struct CRGB *targetArray, int numLeds)
 {
     size_t quarter = numLeds / 4;
 
@@ -245,12 +245,12 @@ void nineninenine(CRGB leds[], int numLeds)
         // quadrant 1
         for (size_t i = 0; i < quarter; i++)
         {
-            leds[i] = CRGB::Blue;
+            targetArray[i] = CRGB::Blue;
         }
         // quadrant 3
         for (size_t i = 2 * quarter; i < 3 * quarter; i++)
         {
-            leds[i] = CRGB::Blue;
+            targetArray[i] = CRGB::Blue;
         }
         FastLED.show();
         FastLED.delay(25);
@@ -264,12 +264,12 @@ void nineninenine(CRGB leds[], int numLeds)
         // quadrant 2
         for (size_t i = quarter; i < 2 * quarter; i++)
         {
-            leds[i] = CRGB::Blue;
+            targetArray[i] = CRGB::Blue;
         }
         // quadrant 4
         for (size_t i = 3 * quarter; i < numLeds; i++)
         {
-            leds[i] = CRGB::Blue;
+            targetArray[i] = CRGB::Blue;
         }
         FastLED.show();
         FastLED.delay(25);

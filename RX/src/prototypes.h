@@ -20,18 +20,18 @@ void fire(struct CRGB *targetArray, int numLeds, const struct CRGBPalette16 &col
 void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
 
 // 91-93
-void rioSpin(CRGB targetArray[], int numLeds);
-void rioDisco(CRGB targetArray[], int numLeds);
-void rioFlag(CRGB targetArray[], int numLeds);
+void rioSpin(struct CRGB *targetArray, int numLeds);
+void rioDisco(struct CRGB *targetArray, int numLeds);
+void rioFlag(struct CRGB *targetArray, int numLeds);
 
 // 97
-void hazards(CRGB targetArray[], int numLeds);
+void hazards(struct CRGB *targetArray, int numLeds);
 
 // 98
 // strobe
 
 // 99
-void rainbow(CRGB targetArray[], int numLeds);
+void rainbow(struct CRGB *targetArray, int numLeds);
 
 // 199 blue strobe
-void nineninenine(CRGB targetArray[], int numLeds);
+void nineninenine(struct CRGB *targetArray, int numLeds);

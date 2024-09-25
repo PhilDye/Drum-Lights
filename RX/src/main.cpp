@@ -238,28 +238,28 @@ void loop()
     break; 
 
   case 11:
-    chase(leds, numLeds, CRGB::Green, CRGB::Green);
+    chase(leds, numLeds, CRGB::Green);
     break;
   case 12:
-    chase(leds, numLeds, CRGB::Gold, CRGB::Gold);
+    chase(leds, numLeds, CRGB::Gold);
     break;
   case 13:
-    chase(leds, numLeds, CRGB::Blue, CRGB::Blue);
+    chase(leds, numLeds, CRGB::Blue);
     break;
   case 14:
-    chase(leds, numLeds, CRGB::Red, CRGB::Red);
+    chase(leds, numLeds, CRGB::Red);
     break;
   case 15:
-    chase(leds, numLeds, CRGB::White, CRGB::White);
+    chase(leds, numLeds, CRGB::White);
     break;
   case 16:
-    chase(leds, numLeds, CRGB::Cyan, CRGB::Cyan);
+    chase(leds, numLeds, CRGB::Cyan);
     break;
   case 17:
-    chase(leds, numLeds, CRGB::Indigo, CRGB::Indigo);
+    chase(leds, numLeds, CRGB::Indigo);
     break;
   case 18:
-    chase(leds, numLeds, CRGB::OrangeRed, CRGB::OrangeRed);
+    chase(leds, numLeds, CRGB::OrangeRed);
     break;
 
   case 50:
@@ -277,42 +277,42 @@ void loop()
 
   // bi-colors
   case 61:
-    colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Red, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Red);
     break;
   case 62:
-    colorTwinkle(leds, numLeds, CRGB::Gold, CRGB::Blue, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Gold, CRGB::Blue);
     break;
   case 63:
-    colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White);
     break;
   case 68:
-    colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Green, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Green);
     break;
 
   // single colors
   case 81:
-    colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Green);
     break;
   case 82:
-    colorTwinkle(leds, numLeds, CRGB::Gold, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Gold);
     break;
   case 83:
-    colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Blue);
     break;
   case 84:
-    colorTwinkle(leds, numLeds, CRGB::Red, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Red);
     break;
   case 85:
-    colorTwinkle(leds, numLeds, CRGB::White, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::White);
     break;
   case 86:
-    colorTwinkle(leds, numLeds, CRGB::Cyan, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Cyan);
     break;
   case 87:
-    colorTwinkle(leds, numLeds, CRGB::Indigo, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::Indigo);
     break;
   case 88:
-    colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Black, CRGB::Black);
+    colorTwinkle(leds, numLeds, CRGB::OrangeRed);
     break;
 
   case 91:

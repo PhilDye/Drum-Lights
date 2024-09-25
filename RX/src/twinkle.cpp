@@ -2,7 +2,7 @@
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
-void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1, const struct CRGB &color2)
+void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1 = CRGB::Black, const struct CRGB &color2 = CRGB::Black)
 {
     static byte activePixels = numLeds / 20; // controls density of lit pixels
     static byte lastPixel = 0;

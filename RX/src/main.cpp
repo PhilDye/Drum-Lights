@@ -224,29 +224,39 @@ void loop()
     fill_solid(leds, numLeds, CRGB::OrangeRed);
     break;
 
+  case 21:
+    chase(leds, numLeds, CRGB::Green, CRGB::Red);   // Christmas
+    break;
+  case 23:
+    chase(leds, numLeds, CRGB::Blue, CRGB::White);     // Swan Samba
+    break;
+  case 28:
+    chase(leds, numLeds, CRGB::OrangeRed, CRGB::Green);   // Halloween
+    break; 
+
   case 11:
-    chase(leds, numLeds, CRGB::Green);
+    chase(leds, numLeds, CRGB::Green, CRGB::Green);
     break;
   case 12:
-    chase(leds, numLeds, CRGB::Gold);
+    chase(leds, numLeds, CRGB::Gold, CRGB::Gold);
     break;
   case 13:
-    chase(leds, numLeds, CRGB::Blue);
+    chase(leds, numLeds, CRGB::Blue, CRGB::Blue);
     break;
   case 14:
-    chase(leds, numLeds, CRGB::Red);
+    chase(leds, numLeds, CRGB::Red, CRGB::Red);
     break;
   case 15:
-    chase(leds, numLeds, CRGB::White);
+    chase(leds, numLeds, CRGB::White, CRGB::White);
     break;
   case 16:
-    chase(leds, numLeds, CRGB::Cyan);
+    chase(leds, numLeds, CRGB::Cyan, CRGB::Cyan);
     break;
   case 17:
-    chase(leds, numLeds, CRGB::Indigo);
+    chase(leds, numLeds, CRGB::Indigo, CRGB::Indigo);
     break;
   case 18:
-    chase(leds, numLeds, CRGB::OrangeRed);
+    chase(leds, numLeds, CRGB::OrangeRed, CRGB::OrangeRed);
     break;
 
   case 50:

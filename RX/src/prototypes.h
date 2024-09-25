@@ -11,7 +11,8 @@ extern const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Blac
 // 1-8  // solid green, yellow, blue, red, white, cyan, magenta, orange
 
 // 11-18    // green, yellow, blue, red, white, cyan, magenta, orange
-void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
+// 21-      // bicolor chases
+void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1);
 
 // 50
 void fire(struct CRGB *targetArray, int numLeds, const struct CRGBPalette16 &colorPalette);

@@ -1,6 +1,6 @@
 #include <FastLED.h>
 
-void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color)
+void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1)
 {
 
   static uint8_t i = 0;
@@ -18,7 +18,22 @@ void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color)
       Serial.println("Busted target!! " + target);
       target = numLeds - 1;
     }
-    targetArray[target] = color;
+    switch (s)
+    {
+      case 0:
+      case 2:
+        targetArray[target] = color0;
+        break;
+
+      case 1:
+      case 3:
+        targetArray[target] = color1;
+        break;
+
+      default:    // fail-safe
+        targetArray[target] = color0;
+        break;
+    }
   }
 
   i++;

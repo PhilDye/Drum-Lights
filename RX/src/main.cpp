@@ -227,6 +227,9 @@ void loop()
   case 21:
     chase(leds, numLeds, CRGB::Green, CRGB::Red);   // Christmas
     break;
+  case 22:
+    chase(leds, numLeds, CRGB::Gold, CRGB::Blue);   // Ukraine
+    break;
   case 23:
     chase(leds, numLeds, CRGB::Blue, CRGB::White);     // Swan Samba
     break;
@@ -272,8 +275,12 @@ void loop()
     fire(leds, numLeds, SodiumFireColors_p);
     break;
 
+  // bi-colors
   case 61:
     colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Red, CRGB::Black);
+    break;
+  case 62:
+    colorTwinkle(leds, numLeds, CRGB::Gold, CRGB::Blue, CRGB::Black);
     break;
   case 63:
     colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White, CRGB::Black);
@@ -282,6 +289,7 @@ void loop()
     colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Green, CRGB::Black);
     break;
 
+  // single colors
   case 81:
     colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Black, CRGB::Black);
     break;

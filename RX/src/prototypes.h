@@ -16,8 +16,9 @@ void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
 // 50
 void fire(struct CRGB *targetArray, int numLeds, const struct CRGBPalette16 &colorPalette);
 
-// 81-88
-void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color);
+// 61-      // bicolor twinkles
+// 81-88    // single color twinkles (green, yellow, blue, red, white, cyan, magenta, orange)
+void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1, const struct CRGB &color2);
 
 // 91-93
 void rioSpin(struct CRGB *targetArray, int numLeds);

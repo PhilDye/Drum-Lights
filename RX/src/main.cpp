@@ -262,29 +262,36 @@ void loop()
     fire(leds, numLeds, SodiumFireColors_p);
     break;
 
+  case 61:
+    colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Red, CRGB::Black);
+    break;
+  case 63:
+    colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White, CRGB::Black);
+    break;
+
   case 81:
-    colorTwinkle(leds, numLeds, CRGB::Green);
+    colorTwinkle(leds, numLeds, CRGB::Green, CRGB::Black, CRGB::Black);
     break;
   case 82:
-    colorTwinkle(leds, numLeds, CRGB::Gold);
+    colorTwinkle(leds, numLeds, CRGB::Gold, CRGB::Black, CRGB::Black);
     break;
   case 83:
-    colorTwinkle(leds, numLeds, CRGB::Blue);
+    colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::Black, CRGB::Black);
     break;
   case 84:
-    colorTwinkle(leds, numLeds, CRGB::Red);
+    colorTwinkle(leds, numLeds, CRGB::Red, CRGB::Black, CRGB::Black);
     break;
   case 85:
-    colorTwinkle(leds, numLeds, CRGB::White);
+    colorTwinkle(leds, numLeds, CRGB::White, CRGB::Black, CRGB::Black);
     break;
   case 86:
-    colorTwinkle(leds, numLeds, CRGB::Cyan);
+    colorTwinkle(leds, numLeds, CRGB::Cyan, CRGB::Black, CRGB::Black);
     break;
   case 87:
-    colorTwinkle(leds, numLeds, CRGB::Indigo);
+    colorTwinkle(leds, numLeds, CRGB::Indigo, CRGB::Black, CRGB::Black);
     break;
   case 88:
-    colorTwinkle(leds, numLeds, CRGB::OrangeRed);
+    colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Black, CRGB::Black);
     break;
 
   case 91:

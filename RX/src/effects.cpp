@@ -38,41 +38,6 @@ void rioSpin(struct CRGB *targetArray, int numLeds)
     }
 }
 
-void rioDisco(CRGB leds[], int numLeds)
-{
-    static uint8_t activePixels = numLeds / 20; // controls density of lit pixels
-    static uint16_t lastPixel = 0;
-
-    for (uint8_t i = 0; i < activePixels; i++)
-    {
-        fadeToBlackBy(leds, numLeds, numLeds / activePixels);
-
-        uint8_t c = random8(0, 3);
-        switch (c)
-        {
-        case 0:
-            leds[lastPixel] = CRGB::Green;
-            break;
-        case 1:
-            leds[lastPixel] = CRGB::Gold;
-            break;
-        case 2:
-            leds[lastPixel] = CRGB::DarkBlue;
-            break;
-        }
-
-        lastPixel = random8(numLeds - 1);
-
-        while (leds[lastPixel].red > 0 || leds[lastPixel].green > 0 || leds[lastPixel].blue > 0)
-        {
-            // pixel already lit, pick again!
-            lastPixel = random8(numLeds - 1);
-        }
-        // leds[lastPixel] = CRGB::White;
-    }
-    // FastLED.delay(10);     // slow things down
-}
-
 void rioFlag(struct CRGB *targetArray, int numLeds)
 {
 
@@ -224,7 +189,12 @@ void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &colo
     }
 }
 
-void rainbow(CRGB leds[], int numLeds)
+void rioDisco(struct CRGB *targetArray, int numLeds)
+{
+    colorTwinkle(targetArray, numLeds, CRGB::Green, CRGB::Gold, CRGB::DarkBlue);
+}
+
+void rainbow(struct CRGB *targetArray, int numLeds)
 {
     uint8_t thisHue = beat8(60, 255);
     fill_rainbow(targetArray, numLeds, thisHue, 7);

@@ -13,7 +13,7 @@ void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color)
   for (uint8_t s = 0; s < SEGMENTS; s++)
   {
     uint8_t target = i + (segmentSize * s);
-    if (target > numLeds)
+    while (target > numLeds)
     {
       Serial.println("Busted target!! " + target);
       target = numLeds - 1;

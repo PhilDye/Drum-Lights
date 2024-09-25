@@ -185,7 +185,7 @@ void loop()
 
   if (ledMode < 0 && millis() > IDLETIMEOUT)    // no mode set yet
   {
-    ledMode = 13;   // chase blue
+    ledMode = 63;   // swan samba twinkle
   }
 
   int currentMode = ledMode;

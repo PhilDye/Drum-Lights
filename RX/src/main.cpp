@@ -233,6 +233,9 @@ void loop()
   case 23:
     chase(leds, numLeds, CRGB::Blue, CRGB::White);     // Swan Samba
     break;
+  case 24:
+    chase(leds, numLeds, CRGB::Red, CRGB::White);     // Red-White
+    break;
   case 28:
     chase(leds, numLeds, CRGB::OrangeRed, CRGB::Green);   // Halloween
     break; 
@@ -284,6 +287,9 @@ void loop()
     break;
   case 63:
     colorTwinkle(leds, numLeds, CRGB::Blue, CRGB::White);
+    break;
+  case 64:
+    colorTwinkle(leds, numLeds, CRGB::Red, CRGB::White);
     break;
   case 68:
     colorTwinkle(leds, numLeds, CRGB::OrangeRed, CRGB::Green);

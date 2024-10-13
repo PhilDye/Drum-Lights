@@ -127,6 +127,7 @@ void setup()
     Serial.print("Got drum type from config: ");
     Serial.println(drumType);
   }
+  ini.close();
 
   Serial.print("Setting up LEDs... ");
   LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);

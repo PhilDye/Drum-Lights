@@ -168,11 +168,6 @@ void readRadio()
     Serial.print("Radio RX data: ");
     Serial.println(ledMode);
 
-    // if (ledMode > 47)
-    // {
-    //   ledMode = ledMode - 48; // seems to be an offset?!
-    // }
-
     // clear all pixels ready for the new mode
     FastLED.clear();
   }

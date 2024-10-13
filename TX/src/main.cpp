@@ -13,14 +13,14 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
-#include <secrets.h>
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
-
 #include <millisDelay.h>
+
+#include <secrets.h>
 
 // Setup the network
 const char *ssid = WIFI_SSID;     // Set in build environment
@@ -37,21 +37,21 @@ DNSServer dnsServer;
 #define NRF24L01_PIN_CE 17
 #define NRF24L01_PIN_CS 5
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
-const byte address[5] = {'R','x','A','A','1'};
+const byte address[5] = {'R', 'x', 'A', 'A', '1'};
+const byte RETRANSMITS = 5; // how many times we retransmit every message, for reliability in noisy RF environments
 
-const byte RETRANSMITS = 5;   // how many times we retransmit every message, for reliability in noisy RF environments
+#define LED_BUILTIN 2
 
 int CurrentMode = 0;
 
-const unsigned long AUTO_TIME = 30000; // in mS 
+const unsigned long AUTO_TIME = 30000; // in mS
 const int AUTO_MODE = -1;
 millisDelay autoDelay; // the delay object
 
 const int autoModes[24] = {
-      1,2,3,4,5,6,7,8,
-      11,12,13,14,15,16,17,18,
-      81,82,83,84,85,86,87,88
-    };
+    1, 2, 3, 4, 5, 6, 7, 8,
+    11, 12, 13, 14, 15, 16, 17, 18,
+    81, 82, 83, 84, 85, 86, 87, 88};
 
 class CaptiveRequestHandler : public AsyncWebHandler
 {
@@ -106,7 +106,7 @@ void initRadio()
 
   radio.openWritingPipe(address);
   // Set the PA Level to try preventing power supply related problems
-  radio.setPALevel(RF24_PA_MAX);   // RF24_PA_MAX is default
+  radio.setPALevel(RF24_PA_MAX); // RF24_PA_MAX is default
   radio.setAutoAck(false);
   radio.stopListening(); // put radio in TX mode
 
@@ -124,73 +124,80 @@ void initWebServer()
   webServer.begin();
 }
 
-void notifyClients() {
-    const size_t size = JSON_OBJECT_SIZE(1);
-    StaticJsonDocument<size> json;
-    json["mode"] = CurrentMode;
+void notifyClients()
+{
+  const size_t size = JSON_OBJECT_SIZE(1);
+  StaticJsonDocument<size> json;
+  json["mode"] = CurrentMode;
 
-    char msg[32];
-    size_t len = serializeJson(json, msg);
-    ws.textAll(msg, len);
+  char msg[32];
+  size_t len = serializeJson(json, msg);
+  ws.textAll(msg, len);
+
+  Serial.printf("CurrentMode #%d broadcasted to WS\n", CurrentMode);
 }
 
 void broadcastRF()
 {
-    for (size_t i = 0; i < RETRANSMITS; i++)
-    {
-        radio.write(&CurrentMode, sizeof(CurrentMode), true);
-        delay(10);
-    }
-    Serial.printf("CurrentMode #%d broadcasted\n", CurrentMode);
+  for (size_t i = 0; i < RETRANSMITS; i++)
+  {
+    radio.write(&CurrentMode, sizeof(CurrentMode), true);
+    delay(10);
+  }
+  Serial.printf("CurrentMode #%d broadcasted to RF\n", CurrentMode);
 }
 
-    AwsFrameInfo *info = (AwsFrameInfo*)arg;
-    if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-
-        const size_t size = JSON_OBJECT_SIZE(1);
-        StaticJsonDocument<size> json;
-        DeserializationError err = deserializeJson(json, data);
-        if (err) {
-            Serial.print(F("deserializeJson() failed with code "));
-            Serial.println(err.c_str());
-            return;
-        }
 void handleWSMessage(void *arg, uint8_t *data, size_t len)
+{
+  AwsFrameInfo *info = (AwsFrameInfo *)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
+  {
 
-        int previousMode = CurrentMode;
+    const size_t size = JSON_OBJECT_SIZE(1);
+    StaticJsonDocument<size> json;
+    DeserializationError err = deserializeJson(json, data);
+    if (err)
+    {
+      Serial.print(F("deserializeJson() failed with code "));
+      Serial.println(err.c_str());
+      return;
+    }
 
-        int newMode = json["mode"];
+    int previousMode = CurrentMode;
 
-        Serial.printf("Received mode #%d\n", newMode);
+    int newMode = json["mode"];
 
-        if (newMode == AUTO_MODE) {    // auto
-          Serial.printf("AUTO mode set ON\n");
+    Serial.printf("Received mode #%d\n", newMode);
 
-          // set a random mode
-          newMode = autoModes[random(21)];
-          Serial.printf("CurrentMode randomised to #%d\n", newMode);
-          autoDelay.start(AUTO_TIME);
-        }
-        else if(CurrentMode = AUTO_MODE)
-        {
-          autoDelay.stop();
-          Serial.printf("AUTO mode set OFF\n");
-        }
+    if (newMode == AUTO_MODE)
+    { // auto
+      Serial.printf("AUTO mode set ON\n");
 
-        CurrentMode = newMode;
-        Serial.printf("CurrentMode set to #%d\n", CurrentMode);
+      // set a random mode
+      newMode = autoModes[random(24)];
+      Serial.printf("CurrentMode randomised to #%d\n", newMode);
+      autoDelay.start(AUTO_TIME);
+    }
+    else if (CurrentMode = AUTO_MODE)
+    {
+      autoDelay.stop();
+      Serial.printf("AUTO mode set OFF\n");
+    }
 
+    CurrentMode = newMode;
+    Serial.printf("CurrentMode set to #%d\n", CurrentMode);
 
-        if (newMode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
-          CurrentMode = previousMode;
-          Serial.printf("CurrentMode reverted to #%d\n", previousMode);
-        }
     broadcastRF();
 
-        notifyClients();
+    if (newMode == 98)
+    { // revert mode for strobe (RX automatically revert so no need to TX)
+      CurrentMode = previousMode;
+      Serial.printf("CurrentMode reverted to #%d\n", previousMode);
     }
-}
 
+    notifyClients();
+  }
+}
 
 void onWSEvent(AsyncWebSocket *server,
              AsyncWebSocketClient *client,
@@ -263,8 +270,8 @@ void loop()
   dnsServer.processNextRequest();
   ws.cleanupClients();
 
-  if (autoDelay.justFinished()) {
-
+  if (autoDelay.justFinished())
+  {
     // set a random mode
     CurrentMode = autoModes[random(21)];
     Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
@@ -273,6 +280,6 @@ void loop()
     notifyClients();
 
     autoDelay.repeat(); // repeat
-    Serial.println("autoDelay restarted" );
+    Serial.println("autoDelay restarted");
   }
 }

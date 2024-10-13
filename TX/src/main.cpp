@@ -148,7 +148,7 @@ void notifyClients() {
     ws.textAll(msg, len);
 }
 
-void broadcast()
+void broadcastRF()
 {
     for (size_t i = 0; i < RETRANSMITS; i++)
     {
@@ -158,7 +158,6 @@ void broadcast()
     Serial.printf("CurrentMode #%d broadcasted\n", CurrentMode);
 }
 
-void handleMessage(void *arg, uint8_t *data, size_t len) {
     AwsFrameInfo *info = (AwsFrameInfo*)arg;
     if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
 
@@ -170,6 +169,7 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
             Serial.println(err.c_str());
             return;
         }
+void handleWSMessage(void *arg, uint8_t *data, size_t len)
 
         int previousMode = CurrentMode;
 
@@ -194,19 +194,19 @@ void handleMessage(void *arg, uint8_t *data, size_t len) {
         CurrentMode = newMode;
         Serial.printf("CurrentMode set to #%d\n", CurrentMode);
 
-        broadcast();
 
         if (newMode == 98) {     // revert mode for strobe (RX automatically revert so no need to TX)
           CurrentMode = previousMode;
           Serial.printf("CurrentMode reverted to #%d\n", previousMode);
         }
+    broadcastRF();
 
         notifyClients();
     }
 }
 
 
-void onEvent(AsyncWebSocket *server,
+void onWSEvent(AsyncWebSocket *server,
              AsyncWebSocketClient *client,
              AwsEventType type,
              void *arg,
@@ -224,7 +224,7 @@ void onEvent(AsyncWebSocket *server,
     break;
   case WS_EVT_DATA:
     Serial.printf("WebSocket data received\n");
-    handleMessage(arg, data, len);
+    handleWSMessage(arg, data, len);
     break;
   case WS_EVT_PONG:
   case WS_EVT_ERROR:
@@ -234,7 +234,7 @@ void onEvent(AsyncWebSocket *server,
 
 void initWebSocket()
 {
-  ws.onEvent(onEvent);
+  ws.onEvent(onWSEvent);
   webServer.addHandler(&ws);
 }
 
@@ -280,7 +280,7 @@ void loop()
     CurrentMode = autoModes[random(21)];
     Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
 
-    broadcast();
+    broadcastRF();
     notifyClients();
 
     autoDelay.repeat(); // repeat

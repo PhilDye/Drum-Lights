@@ -17,7 +17,7 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 
 #include <millisDelay.h>
@@ -87,10 +87,6 @@ String templateProcessor(const String &var)
   return String(var == "STATE" && false ? "on" : "off");
 }
 
-void onRootRequest(AsyncWebServerRequest *request)
-{
-  request->send(SPIFFS, "/index.html", "text/html", false, templateProcessor);
-}
 
 void onNotFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
@@ -117,23 +113,13 @@ void initRadio()
   radio.printPrettyDetails(); // (larger) function that prints human readable data
 }
 
-void initSPIFFS()
-{
-  if (!SPIFFS.begin())
-  {
-    Serial.println("Cannot mount SPIFFS volume...");
-    while (1)
-      digitalWrite(LED_BUILTIN, millis() % 500 < 250 ? HIGH : LOW);
-  }
-}
-
 void initWebServer()
 {
   webServer.on("/", onRootRequest);
   webServer.on("/generate_204", onRootRequest);   //Android captive portal check
   webServer.onNotFound(onNotFound);
-  webServer.serveStatic("/", SPIFFS, "/");
   webServer.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER); // only when requested from AP
+  webServer.serveStatic("/", LittleFS, "/").setDefaultFile("index.html").setCacheControl("max-age=600");;
 
   webServer.begin();
 }
@@ -257,10 +243,13 @@ void setup()
   }
 
   initRadio();
-  initSPIFFS();
 
   WiFi.softAP(ssid, password);
   delay(100);
+  if(!LittleFS.begin(true)){
+    Serial.println("An Error has occurred while mounting LITTLEFS");
+    return;
+  }
 
   initWebSocket();
   initWebServer();

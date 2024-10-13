@@ -164,8 +164,10 @@ void readRadio()
 
   if (radio.available(&pipe))
   { // is there a payload?
-    byte payLoadSize = radio.getPayloadSize();
-    radio.read(&ledMode, payLoadSize); // fetch payload from FIFO
+    int payload;
+    radio.read(&payload, sizeof(payload)); // get incoming payload
+    ledMode = payload;
+
     Serial.print("Radio RX data: ");
     Serial.println(ledMode);
 

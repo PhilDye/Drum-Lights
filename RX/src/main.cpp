@@ -121,7 +121,7 @@ void setup()
     Serial.print("Got numLeds from config: ");
     Serial.println(numLeds);
   }
-  long drumType = 0;
+  int drumType = 0;
   if (ini.getValue("drum", "type", buffer, bufferLen, drumType))
   {
     Serial.print("Got drum type from config: ");

@@ -1,0 +1,11 @@
+$btn-padding-y:     .5rem;
+$btn-padding-x:     1rem;
+
+$nav-link-border-color:  #00ff48;
+
+// Import all of Bootstrap's CSS
+@import "bootstrap/scss/bootstrap";
+
+.nav-link {
+    border: var(--#{$prefix}border-width) solid var(--#{$prefix}border-color);
+}

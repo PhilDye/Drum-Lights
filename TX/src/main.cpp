@@ -13,6 +13,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <DNSServer.h>
+#include <esp_wifi.h> //Used for mpdu_rx_disable android workaround
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
@@ -23,10 +24,13 @@
 #include <secrets.h>
 
 // Setup the network
-const char *ssid = WIFI_SSID;     // Set in build environment
-const char *password = WIFI_PASS; // Set in build environment
 const byte DNS_PORT = 53;
 const byte HTTP_PORT = 80;
+const IPAddress localIP(192, 168, 4, 1);          // the IP address the web server, Samsung requires the IP to be in public space
+const IPAddress gatewayIP(192, 168, 4, 1);        // IP address of the network should be the same as the local IP for captive portals
+const IPAddress subnetMask(255, 255, 255, 0); // no need to change: https://avinetworks.com/glossary/subnet-mask/
+const String localIPURL = "http://192.168.4.1";   // a string version of the local IP with http, used for redirecting clients to your webpage
+#define DNS_INTERVAL 30
 
 // Setup the servers
 AsyncWebServer webServer(HTTP_PORT);
@@ -56,42 +60,30 @@ const int autoModes[24] = {
 class CaptiveRequestHandler : public AsyncWebHandler
 {
 public:
-  CaptiveRequestHandler() {}
-  virtual ~CaptiveRequestHandler() {}
+    explicit CaptiveRequestHandler(String redirectTargetURL) :
+        targetURL("http://" + WiFi.softAPIP().toString() + redirectTargetURL)
+    {
+    }
+    virtual ~CaptiveRequestHandler() {}
 
-  bool canHandle(AsyncWebServerRequest *request)
-  {
-    return true;
-  }
+    const String targetURL;
 
-  void handleRequest(AsyncWebServerRequest *request)
-  {
-    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    bool canHandle(AsyncWebServerRequest *request) override
+    {
+        // redirect if not in wifi client mode (through filter)
+        // and request for different host (due to DNS * response)
+        if (request->host() != WiFi.softAPIP().toString())
+            return true;
+        else
+            return false;
+    }
 
-    response->print("<!DOCTYPE html <html>");
-    response->print("<head>");
-    response->print("<meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=no'>");
-    response->print("<title>Drum LEDs Control</title>");
-    response->print("<link rel='stylesheet' href='/index.css' />");
-    response->print("</head>");
-    response->print("<body>");
-    response->print("<h1>Drum LEDs</h1>");
-    response->printf("<p style='color:white'><a href='http://%s' style='color:white'>Open Drum LEDs</a></p>", WiFi.softAPIP().toString().c_str());
-    response->print("</body></html>");
-    request->send(response);  
-  }
+    void handleRequest(AsyncWebServerRequest *request) override
+    {
+        request->redirect(targetURL);
+        log_d("Captive handler triggered. Requested %s%s -> redirecting to %s", request->host().c_str(), request->url().c_str(), targetURL.c_str());
+    }
 };
-
-String templateProcessor(const String &var)
-{
-  return String(var == "STATE" && false ? "on" : "off");
-}
-
-
-void onNotFound(AsyncWebServerRequest *request) {
-  request->send(404, "text/plain", "Not found");
-}
-
 
 void initRadio()
 {
@@ -113,13 +105,24 @@ void initRadio()
   radio.printPrettyDetails(); // (larger) function that prints human readable data
 }
 
-void initWebServer()
+void setUpWebserver(AsyncWebServer &webServer, const IPAddress &localIP)
 {
-  webServer.on("/", onRootRequest);
-  webServer.on("/generate_204", onRootRequest);   //Android captive portal check
-  webServer.onNotFound(onNotFound);
-  webServer.addHandler(new CaptiveRequestHandler()).setFilter(ON_AP_FILTER); // only when requested from AP
+  	// Required
+	webServer.on("/connecttest.txt", [](AsyncWebServerRequest *request) { request->redirect("http://logout.net"); });	// windows 11 captive portal workaround
+	webServer.on("/wpad.dat", [](AsyncWebServerRequest *request) { request->send(404); });								// Honestly don't understand what this is but a 404 stops win 10 keep calling this repeatedly and panicking the esp32 :)
+
+	// Background responses: Probably not all are Required, but some are. Others might speed things up?
+	// A Tier (commonly used by modern systems)
+	webServer.on("/generate_204", [](AsyncWebServerRequest *request) { request->redirect(localIPURL); });		   // android captive portal redirect
+	webServer.on("/redirect", [](AsyncWebServerRequest *request) { request->redirect(localIPURL); });			   // microsoft redirect
+	webServer.on("/hotspot-detect.html", [](AsyncWebServerRequest *request) { request->redirect(localIPURL); });  // apple call home
+	webServer.on("/canonical.html", [](AsyncWebServerRequest *request) { request->redirect(localIPURL); });	   // firefox captive portal call home
+	webServer.on("/success.txt", [](AsyncWebServerRequest *request) { request->send(200); });					   // firefox captive portal call home
+	webServer.on("/ncsi.txt", [](AsyncWebServerRequest *request) { request->redirect(localIPURL); });			   // windows call home
+  
+  webServer.addHandler(new CaptiveRequestHandler("/")).setFilter(ON_AP_FILTER); // only when requested from AP
   webServer.serveStatic("/", LittleFS, "/").setDefaultFile("index.html").setCacheControl("max-age=600");;
+  webServer.onNotFound([](AsyncWebServerRequest *request) { request->redirect(localIPURL); });
 
   webServer.begin();
 }
@@ -231,12 +234,36 @@ void initWebSocket()
   webServer.addHandler(&ws);
 }
 
-void initCaptivePortal()
+void setUpDNSServer(DNSServer &dnsServer, const IPAddress &localIP)
 {
-  // Setup a captive portal, responding to all DNS requests with the ESP's IP
+  // Respond to all DNS requests with the ESP's IP
   dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+  dnsServer.setTTL(3600);
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
   Serial.println("DNS server started");
+}
+
+void startAccessPoint(const char *ssid, const char *password, const IPAddress &localIP, const IPAddress &gatewayIP, const IPAddress &subnetMask)
+{
+#define WIFI_CHANNEL 6
+
+  // Set the WiFi mode to access point and station
+  WiFi.mode(WIFI_MODE_AP);
+
+  // Configure the soft access point with a specific IP and subnet mask
+  WiFi.softAPConfig(localIP, gatewayIP, subnetMask);
+
+  // Start the soft access point with the given ssid, password, channel, max number of clients
+  WiFi.softAP(ssid, password, WIFI_CHANNEL);
+
+  // Disable AMPDU RX on the ESP32 WiFi to fix a bug on Android
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  wifi_init_config_t my_config = WIFI_INIT_CONFIG_DEFAULT();
+  my_config.ampdu_rx_enable = false;
+  esp_wifi_init(&my_config);
+  esp_wifi_start();
+  vTaskDelay(100 / portTICK_PERIOD_MS); // Add a small delay
 }
 
 void setup()
@@ -251,16 +278,19 @@ void setup()
 
   initRadio();
 
-  WiFi.softAP(ssid, password);
-  delay(100);
   if(!LittleFS.begin(true)){
     Serial.println("An Error has occurred while mounting LITTLEFS");
     return;
   }
 
+  startAccessPoint(WIFI_SSID, WIFI_PASS, localIP, gatewayIP, subnetMask);
+
+  setUpDNSServer(dnsServer, localIP);
+
+  setUpWebserver(webServer, localIP);
+  webServer.begin();
+
   initWebSocket();
-  initWebServer();
-  initCaptivePortal();
 
   Serial.println("Ready; HTTP server started on " + WiFi.softAPIP().toString());
 }
@@ -273,7 +303,7 @@ void loop()
   if (autoDelay.justFinished())
   {
     // set a random mode
-    CurrentMode = autoModes[random(21)];
+    CurrentMode = autoModes[random(24)];
     Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
 
     broadcastRF();
@@ -282,4 +312,6 @@ void loop()
     autoDelay.repeat(); // repeat
     Serial.println("autoDelay restarted");
   }
+
+  delay(DNS_INTERVAL);  // seems to help with stability, if you are doing other things in the loop this may not be needed
 }

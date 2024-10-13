@@ -273,7 +273,7 @@ void loop()
     fire(leds, numLeds, AlcoholFireColors_p);
     break;
   case 53:
-    fire(leds, numLeds, SodiumFireColors_p);
+    fire(leds, numLeds, LithiumFireColors_p);
     break;
 
   // bi-colors

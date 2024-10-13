@@ -38,10 +38,10 @@ const byte address[5] = {'R', 'x', 'A', 'A', '1'};
 #define FRAMES_PER_SECOND 35
 byte max_bright = 255;      // Overall brightness definition, could be changed on the fly
 struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
-int numLeds = MAX_LEDS;    // To be read from config later
+int numLeds = MAX_LEDS;     // To be read from config later
 
-int ledMode = -1; // The currently active pattern
-unsigned long IDLETIMEOUT = 30000;  // Time to wait before doing our own thing
+int ledMode = -1;                  // The currently active pattern
+unsigned long IDLETIMEOUT = 30000; // Time to wait before doing our own thing
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
 
@@ -80,7 +80,7 @@ void setup()
 
   Serial.println("Setting up...");
 
-  #pragma region CONFIGFILE
+#pragma region CONFIGFILE
 
   // to read config file
   const byte bufferLen = 80;
@@ -114,7 +114,7 @@ void setup()
     ledMode = -2;
   }
 
-  #pragma endregion CONFIGFILE
+#pragma endregion CONFIGFILE
 
   if (ini.getValue("leds", "count", buffer, bufferLen, numLeds))
   {
@@ -181,9 +181,9 @@ void loop()
   // Add entropy to random number generator; we use a lot of it
   random16_add_entropy(random());
 
-  if (ledMode < 0 && millis() > IDLETIMEOUT)    // no mode set yet
+  if (ledMode < 0 && millis() > IDLETIMEOUT) // no mode set yet
   {
-    ledMode = 63;   // swan samba twinkle
+    ledMode = 63; // swan samba twinkle
   }
 
   int currentMode = ledMode;
@@ -223,20 +223,20 @@ void loop()
     break;
 
   case 21:
-    chase(leds, numLeds, CRGB::Green, CRGB::Red);   // Christmas
+    chase(leds, numLeds, CRGB::Green, CRGB::Red); // Christmas
     break;
   case 22:
-    chase(leds, numLeds, CRGB::Gold, CRGB::Blue);   // Ukraine
+    chase(leds, numLeds, CRGB::Gold, CRGB::Blue); // Ukraine
     break;
   case 23:
-    chase(leds, numLeds, CRGB::Blue, CRGB::White);     // Swan Samba
+    chase(leds, numLeds, CRGB::Blue, CRGB::White); // Swan Samba
     break;
   case 24:
-    chase(leds, numLeds, CRGB::Red, CRGB::White);     // Red-White
+    chase(leds, numLeds, CRGB::Red, CRGB::White); // Red-White
     break;
   case 28:
-    chase(leds, numLeds, CRGB::OrangeRed, CRGB::Green);   // Halloween
-    break; 
+    chase(leds, numLeds, CRGB::OrangeRed, CRGB::Green); // Halloween
+    break;
 
   case 11:
     chase(leds, numLeds, CRGB::Green);
@@ -350,7 +350,6 @@ void loop()
     nineninenine(leds, numLeds);
     break;
 
-
   // ERROR MODES
   case -2:
     // file failure
@@ -366,7 +365,6 @@ void loop()
     // unknown mode
     showError(leds, CRGB::DarkGray);
     break;
-
   }
 
   FastLED.show(); // display this frame

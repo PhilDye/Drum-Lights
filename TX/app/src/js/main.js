@@ -9,6 +9,9 @@ if (process.env.NODE_ENV === 'development') {
     var gateway = `ws://websocket-echo.com/`;
 }
 
+var networkModalEl = document.querySelector('#networkModal')
+var networkModal = Modal.getOrCreateInstance(networkModalEl) // Returns a Bootstrap modal instance
+
 let websocket;
 
 function initWebSocket() {
@@ -21,19 +24,12 @@ function initWebSocket() {
 
 function onOpen(event) {
     console.log('Connection opened');
-    const networkModal = new Modal(document.getElementById('networkModal'));
     networkModal.hide();
 }
 
 function onClose(event) {
     console.log('Connection closed');
-    const networkModal = new Modal(document.getElementById('networkModal'));
-    if ($('#networkModal').hasClass('show')) {
-        // The modal is shown
-      } else {
-        // The modal is not shown
-        networkModal.show();
-      }    
+    networkModal.show();  
     setTimeout(initWebSocket, 1000);
 }
 

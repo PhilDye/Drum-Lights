@@ -9,8 +9,8 @@ if (process.env.NODE_ENV === 'development') {
     var gateway = `ws://websocket-echo.com/`;
 }
 
-var networkModalEl = document.querySelector('#networkModal')
-var networkModal = Modal.getOrCreateInstance(networkModalEl) // Returns a Bootstrap modal instance
+var networkModalEl = document.querySelector('#networkModal');
+var networkModal = Modal.getOrCreateInstance(networkModalEl); // Returns a Bootstrap modal instance
 
 let websocket;
 

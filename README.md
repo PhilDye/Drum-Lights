@@ -66,9 +66,9 @@ The receiver reads a configuration file with the number of LEDs available in the
 
 ## LED mounting
 
-Self-adhesive LED strip is mounted inside the shell of each drum, approx a quarter of the way from the top, around the full circumference. 
+Self-adhesive IP65 WS2812B LED strip is mounted inside the shell of each drum, approx a quarter of the way from the top, around the full circumference. 
 
-The WS2812B strip requires 3-core cable: 5V, data and ground;
+The strip requires 3-core cable: 5V, data and ground;
 ![WS2812B strip with wires attached](_docs/IMG_3530.jpeg)
 
 Ensure this is sealed with silicone or hot-glue to prevent water ingress, and insulated with heatshrink;
@@ -78,11 +78,11 @@ The cable exits through the sound hole/port and runs to an enclosure holding the
 
 ## Enclosures
 
-Both RX and TX are mounted in custom 3D-printed boxes; the RX in particular is designed to secure the components against vibration. Power is supplied via a 5.5mm DC jack.
+Both RX and TX are mounted in custom 3D-printed boxes; the RX in particular is designed to secure the components against vibration. Power is supplied via a 5.5mm DC jack using a [USB cable](https://www.kenable.co.uk/en/usb-cables-adapters/usb-20-cables/usb-20-adapters/7629-usb-to-dc-power-cable-usb-20-for-21mm-x-55mm-5v-2a-2000ma-1m-007629-5055383476299.html).
 
 ![3D-printed enclosure mounted on a surdo drum](_docs/IMG_3526.jpeg)
 
-Experience has shown it's best to mount the RX on the rear of all drums and ensure the TX is positioned at the back of the band, to avoid metal-shelled drums blocking the RF signal. Ensure players know this to mount their drum accordingly.
+Experience has shown it's best to mount the RX on the *rear* of all drums with 3M VHB double-sided tape. Ensure the TX is positioned at the rear of the band too, to avoid metal-shelled drums blocking the RF signal. _Ensure players know this to mount their drum accordingly!_
 
 ## PCBs
 
@@ -108,6 +108,8 @@ The lighting patterns currently available are;
 - Strobe: rapid, short-duration flashes of full-intensity white - perfect for big hits!
 - 999: alternate high-frequency flashing blue strobes (named after the UK emergency-services telephone number).
 - Auto: randomises most of the above every 30s; ideal to 'fire-and-forget' if no-one is available to run the show.
+
+
 
 Many of the FastLED demo effects suit 1D (strip) or 2D (panel) setups; the circular/ring configuration here does present some additional challenges, but further effects are really only limited by imagination (although compexity of the control UI should be considered).
 

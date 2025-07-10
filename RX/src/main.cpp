@@ -39,6 +39,7 @@ const byte address[5] = {'R', 'x', 'A', 'A', '1'};
 byte max_bright = 255;      // Overall brightness definition, could be changed on the fly
 struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
 int numLeds = MAX_LEDS;     // To be read from config later
+int rotationDirection = 1;      // Rotation direction: 1 for clockwise, -1 for counter-clockwise
 
 int ledMode = -1;                  // The currently active pattern
 unsigned long IDLETIMEOUT = 30000; // Time to wait before doing our own thing
@@ -126,6 +127,11 @@ void setup()
   {
     Serial.print("Got drum type from config: ");
     Serial.println(drumType);
+  }
+  if (ini.getValue("drum", "direction", buffer, bufferLen, rotationDirection))
+  {
+    Serial.print("Got rotation direction from config: ");
+    Serial.println(rotationDirection);
   }
   ini.close();
 

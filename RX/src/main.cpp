@@ -132,6 +132,16 @@ void setup()
   {
     Serial.print("Got rotation direction from config: ");
     Serial.println(rotationDirection);
+    
+    // Validate rotation direction and normalize to 1 or -1
+    if (rotationDirection > 0) {
+      rotationDirection = 1;
+    } else if (rotationDirection < 0) {
+      rotationDirection = -1;
+    } else {
+      Serial.println("Invalid rotation direction, using default clockwise");
+      rotationDirection = 1;
+    }
   }
   ini.close();
 

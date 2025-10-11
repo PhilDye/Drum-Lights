@@ -130,8 +130,8 @@ void setup()
   ini.close();
 
   Serial.print("Setting up LEDs... ");
-  LEDS.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);
-  ;
+  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);
+  
   FastLED.setBrightness(max_bright);
   FastLED.setMaxPowerInVoltsAndMilliamps(VOLTS, MAX_MA);
   FastLED.clear();

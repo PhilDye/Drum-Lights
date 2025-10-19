@@ -1,4 +1,5 @@
 #include <FastLED.h>
+#include "prototypes.h"
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
@@ -31,10 +32,22 @@ void rioSpin(struct CRGB *targetArray, int numLeds)
         }
     }
 
-    offset++;
-    if (offset == numLeds)
-    {
-        offset = 0;
+    // Apply rotation direction
+    if (rotationDirection > 0) {
+        offset++;
+        if (offset == numLeds)
+        {
+            offset = 0;
+        }
+    } else {
+        if (offset == 0)
+        {
+            offset = numLeds - 1;
+        }
+        else
+        {
+            offset--;
+        }
     }
 }
 
@@ -93,15 +106,34 @@ void rioFlag(struct CRGB *targetArray, int numLeds)
         }
     }
 
-    offset++;
-    if (offset == numLeds)
-    {
-        offset = 0;
+    // Apply rotation direction
+    if (rotationDirection > 0) {
+        offset++;
+        if (offset == numLeds)
+        {
+            offset = 0;
+        }
+    } else {
+        if (offset == 0)
+        {
+            offset = numLeds - 1;
+        }
+        else
+        {
+            offset--;
+        }
     }
 }
 
 void rainbow(struct CRGB *targetArray, int numLeds)
 {
     uint8_t thisHue = beat8(60, 255);
-    fill_rainbow(targetArray, numLeds, thisHue, 7);
+    uint8_t deltaHue = 7;
+    
+    // Apply rotation direction by adjusting the starting hue
+    if (rotationDirection < 0) {
+        deltaHue = -deltaHue;
+    }
+    
+    fill_rainbow(targetArray, numLeds, thisHue, deltaHue);
 }

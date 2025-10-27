@@ -29,6 +29,7 @@
 #define NRF24L01_PIN_CS 15
 struct RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R', 'x', 'A', 'A', '1'};
+int rfChannel = 100; // Default RF channel (2.500 GHz) - above UK/EU WiFi channels
 
 // Setup the LEDs
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
@@ -127,6 +128,11 @@ void setup()
     Serial.print("Got drum type from config: ");
     Serial.println(drumType);
   }
+  if (ini.getValue("radio", "channel", buffer, bufferLen, rfChannel))
+  {
+    Serial.print("Got RF channel from config: ");
+    Serial.println(rfChannel);
+  }
   ini.close();
 
   Serial.print("Setting up LEDs... ");
@@ -142,6 +148,7 @@ void setup()
   Serial.print("Setting up radio... ");
   if (radio.begin())
   {
+    radio.setChannel(rfChannel);
     radio.openReadingPipe(1, address);
     radio.setAutoAck(false);
     radio.startListening();     // put radio in TX mode

@@ -105,6 +105,80 @@ static bool readConfig(const char *path, int &numLeds, int &drumType)
   return true;
 }
 
+// One-time migration: if LittleFS isn't mounted (the flash region is
+// still SPIFFS-formatted), read /config.ini from SPIFFS into RAM,
+// format LittleFS, and write the file back. Idempotent on subsequent
+// boots — LittleFS.begin() succeeds first try and the SPIFFS branch
+// never runs. Returns true if LittleFS is mounted on exit.
+static bool mountFsWithMigration(const char *configPath)
+{
+  if (LittleFS.begin())
+  {
+    return true;
+  }
+
+  Serial.println("LittleFS not present; attempting SPIFFS migration");
+
+  const size_t BUF_SZ = 1024;
+  char buffer[BUF_SZ];
+  size_t bufLen = 0;
+  bool haveConfig = false;
+
+  if (SPIFFS.begin())
+  {
+    if (SPIFFS.exists(configPath))
+    {
+      File f = SPIFFS.open(configPath, "r");
+      if (f)
+      {
+        bufLen = f.readBytes(buffer, BUF_SZ);
+        if (f.available())
+        {
+          Serial.println("WARN: config.ini larger than 1024 bytes; trailing data lost");
+        }
+        f.close();
+        haveConfig = bufLen > 0;
+        Serial.printf("Read %u bytes of config from SPIFFS\n", (unsigned)bufLen);
+      }
+    }
+    else
+    {
+      Serial.println("No /config.ini on SPIFFS; LittleFS will start empty");
+    }
+    SPIFFS.end();
+  }
+  else
+  {
+    Serial.println("SPIFFS also unmountable; formatting LittleFS fresh");
+  }
+
+  if (!LittleFS.format())
+  {
+    Serial.println("LittleFS.format() failed");
+    return false;
+  }
+  if (!LittleFS.begin())
+  {
+    Serial.println("LittleFS.begin() after format failed");
+    return false;
+  }
+
+  if (haveConfig)
+  {
+    File out = LittleFS.open(configPath, "w");
+    if (!out)
+    {
+      Serial.println("Could not open /config.ini for write on LittleFS");
+      return true;
+    }
+    out.write((const uint8_t *)buffer, bufLen);
+    out.close();
+    Serial.println("Wrote config.ini to LittleFS");
+  }
+
+  return true;
+}
+
 void showStatus(struct CRGB *targetArray, const struct CRGB &color)
 {
   EVERY_N_MILLIS(1000)

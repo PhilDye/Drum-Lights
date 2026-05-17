@@ -48,7 +48,9 @@ It runs an AsyncWebServer serving a simple HTML/CSS/JS page from a filesystem, w
 
 ![TX UI](_docs/TX-UI.png)
 
-The RF24 module uses a configurable transmit power with multiple channels available, but does not avoid packet collision with other sources using the same frequency. For this reason we retransmit each command multiple times in quick succession, in the hope that 'one gets through'. It also requires a stable 3.3v supply, which at high-power transmission could exceed that available from the ESP32, so a separate buck converter is used fed from the power supply.
+The RF24 module uses a configurable transmit power with multiple channels available, but does not avoid packet collision with other sources using the same frequency. To work around this, the TX continuously rebroadcasts the current pattern at 10 Hz (a "heartbeat") so that receivers which miss any individual packet — or that come online late or reboot mid-performance — catch up to the current pattern within ~100 ms. UI mode changes are also sent immediately for zero perceptible latency. The RF24 module requires a stable 3.3v supply, which at high-power transmission could exceed that available from the ESP32, so a separate buck converter is used fed from the power supply.
+
+> **Firmware compatibility:** the heartbeat behaviour requires the matching RX firmware. When upgrading from a pre-heartbeat release, flash all TX and RX units together — a new TX paired with an old RX will visibly malfunction (the old RX clears its LEDs on every received packet and so will wipe running patterns ten times per second).
 
 ## Receiver
 

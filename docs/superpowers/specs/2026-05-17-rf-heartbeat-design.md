@@ -76,7 +76,7 @@ This deletes the existing "save previousMode / revert after broadcast" dance —
 ### Cleanup
 - Delete the `broadcastRF()` function.
 - Delete the `RETRANSMITS` constant.
-- Fix the assignment-vs-comparison bug at the existing `else if (CurrentMode = AUTO_MODE)` line — should be `else if (previousMode == AUTO_MODE)`.
+- Fix the assignment-vs-comparison bug at the existing `else if (CurrentMode = AUTO_MODE)` line. The naive fix `previousMode == AUTO_MODE` does not work because `CurrentMode` never actually holds `AUTO_MODE` while AUTO is running (the AUTO branch overwrites `newMode` with a real mode value before assigning it to `CurrentMode`). Use `autoDelay.isRunning()` as the source of truth for "AUTO is currently active". This also lets us drop the `previousMode` local — nothing else reads it once mode 98 short-circuits at the top.
 
 ## RX changes ([RX/src/main.cpp](../../../RX/src/main.cpp))
 

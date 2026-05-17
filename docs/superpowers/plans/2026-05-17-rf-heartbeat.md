@@ -102,8 +102,6 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
-    int previousMode = CurrentMode;
-
     if (newMode == AUTO_MODE)
     { // auto
       Serial.printf("AUTO mode set ON\n");
@@ -111,7 +109,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       Serial.printf("CurrentMode randomised to #%d\n", newMode);
       autoDelay.start(AUTO_TIME);
     }
-    else if (previousMode == AUTO_MODE)
+    else if (autoDelay.isRunning())
     {
       autoDelay.stop();
       Serial.printf("AUTO mode set OFF\n");
@@ -132,7 +130,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
 
 Key things this rewrite does:
 - Short-circuits mode 98 at the top: single packet, no state change, return.
-- Fixes the `else if (CurrentMode = AUTO_MODE)` assignment bug → `else if (previousMode == AUTO_MODE)`.
+- Fixes the `else if (CurrentMode = AUTO_MODE)` assignment bug. The naive fix `previousMode == AUTO_MODE` does NOT work — `CurrentMode` never actually holds `AUTO_MODE` while AUTO is running (the AUTO branch overwrites `newMode` with a real mode value before assigning it to `CurrentMode`). Use `autoDelay.isRunning()` instead. This also lets us drop the `previousMode` local entirely.
 - Replaces `broadcastRF()` with `sendModeRF(CurrentMode); heartbeatDelay.restart();`.
 - Removes the now-unnecessary `previousMode` save/revert dance around mode 98 (mode 98 returns before touching `CurrentMode`).
 

@@ -61,7 +61,7 @@ else:
 Properties:
 - Idempotent: after a successful migration, subsequent boots take the first branch and never touch SPIFFS.
 - Self-healing: a unit that was never flashed with the new firmware before will still boot — it just starts with an empty filesystem and uses code defaults.
-- Bounded RAM: the config file is tiny (<1 KB in practice). Use a fixed 512-byte buffer; abort migration with an error if larger.
+- Bounded RAM: the config file is tiny (the example is ~36 bytes; <1 KB in practice). Use a fixed 1024-byte buffer. If the source file is larger, log a warning over serial, copy the first 1024 bytes anyway, and continue — losing trailing keys is preferable to losing the whole config.
 
 ### 3. Tiny custom INI parser
 

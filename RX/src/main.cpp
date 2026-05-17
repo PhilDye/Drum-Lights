@@ -15,8 +15,8 @@
 #include <RF24.h>
 #define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
-#include "FS.h"
-#include <SPIFFSIniFile.h>
+#include <FS.h>
+#include <LittleFS.h>
 
 #include "prototypes.h"
 
@@ -44,6 +44,139 @@ int ledMode = -1;                  // The currently active pattern
 unsigned long IDLETIMEOUT = 30000; // Time to wait before doing our own thing
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
+
+// Read /config.ini from LittleFS. Returns true if the file opened
+// successfully (regardless of which keys were present). Unknown keys
+// and sections are silently ignored, so future config additions are
+// non-breaking.
+static bool readConfig(const char *path, int &numLeds, int &drumType)
+{
+  File f = LittleFS.open(path, "r");
+  if (!f)
+  {
+    return false;
+  }
+
+  char section[16] = "";
+  while (f.available())
+  {
+    String line = f.readStringUntil('\n');
+    line.trim();
+    if (line.length() == 0)
+      continue;
+    if (line.startsWith(";") || line.startsWith("#"))
+      continue;
+
+    if (line.startsWith("["))
+    {
+      int end = line.indexOf(']');
+      if (end > 1)
+      {
+        String s = line.substring(1, end);
+        s.trim();
+        s.toCharArray(section, sizeof(section));
+      }
+      continue;
+    }
+
+    int eq = line.indexOf('=');
+    if (eq < 0)
+      continue;
+    String key = line.substring(0, eq);
+    String val = line.substring(eq + 1);
+    key.trim();
+    val.trim();
+
+    if (strcmp(section, "leds") == 0 && key == "count")
+    {
+      numLeds = val.toInt();
+      Serial.print("Got numLeds from config: ");
+      Serial.println(numLeds);
+    }
+    else if (strcmp(section, "drum") == 0 && key == "type")
+    {
+      drumType = val.toInt();
+      Serial.print("Got drum type from config: ");
+      Serial.println(drumType);
+    }
+  }
+  f.close();
+  return true;
+}
+
+// One-time migration: if LittleFS isn't mounted (the flash region is
+// still SPIFFS-formatted), read /config.ini from SPIFFS into RAM,
+// format LittleFS, and write the file back. Idempotent on subsequent
+// boots — LittleFS.begin() succeeds first try and the SPIFFS branch
+// never runs. Returns true if LittleFS is mounted on exit.
+static bool mountFsWithMigration(const char *configPath)
+{
+  if (LittleFS.begin())
+  {
+    return true;
+  }
+
+  Serial.println("LittleFS not present; attempting SPIFFS migration");
+
+  const size_t BUF_SZ = 1024;
+  char buffer[BUF_SZ];
+  size_t bufLen = 0;
+  bool haveConfig = false;
+
+  if (SPIFFS.begin())
+  {
+    if (SPIFFS.exists(configPath))
+    {
+      File f = SPIFFS.open(configPath, "r");
+      if (f)
+      {
+        bufLen = f.readBytes(buffer, BUF_SZ);
+        if (f.available())
+        {
+          Serial.println("WARN: config.ini larger than 1024 bytes; trailing data lost");
+        }
+        f.close();
+        haveConfig = bufLen > 0;
+        Serial.printf("Read %u bytes of config from SPIFFS\n", (unsigned)bufLen);
+      }
+    }
+    else
+    {
+      Serial.println("No /config.ini on SPIFFS; LittleFS will start empty");
+    }
+    SPIFFS.end();
+  }
+  else
+  {
+    Serial.println("SPIFFS also unmountable; formatting LittleFS fresh");
+  }
+
+  if (!LittleFS.format())
+  {
+    Serial.println("LittleFS.format() failed");
+    return false;
+  }
+  if (!LittleFS.begin())
+  {
+    Serial.println("LittleFS.begin() after format failed");
+    return false;
+  }
+
+  if (haveConfig)
+  {
+    File out = LittleFS.open(configPath, "w");
+    if (!out)
+    {
+      Serial.println("Could not open /config.ini for write on LittleFS");
+      return true;
+    }
+    out.write((const uint8_t *)buffer, bufLen);
+    out.close();
+    Serial.println("Wrote config.ini to LittleFS");
+  }
+
+  return true;
+}
 
 void showStatus(struct CRGB *targetArray, const struct CRGB &color)
 {
@@ -82,52 +215,25 @@ void setup()
 
 #pragma region CONFIGFILE
 
-  // to read config file
-  const byte bufferLen = 80;
-  char buffer[bufferLen];
-
   const char *filename = "/config.ini";
 
-  // Mount the SPIFFS
-  if (!SPIFFS.begin())
+  if (!mountFsWithMigration(filename))
   {
-    Serial.println("SPIFFS.begin() failed");
+    Serial.println("Filesystem mount failed");
     ledMode = -2;
   }
-
-  SPIFFSIniFile ini(filename);
-  if (!ini.open())
+  else
   {
-    Serial.print("ini file ");
-    Serial.print(filename);
-    Serial.println(" does not exist");
-    ledMode = -2;
-  }
-
-  // Check the file is valid. This can be used to warn if any lines
-  // are longer than the buffer.
-  if (!ini.validate(buffer, bufferLen))
-  {
-    Serial.print("ini file ");
-    Serial.print(ini.getFilename());
-    Serial.print(" not valid: ");
-    ledMode = -2;
+    int drumType = 0;
+    if (!readConfig(filename, numLeds, drumType))
+    {
+      Serial.print("Config file ");
+      Serial.print(filename);
+      Serial.println(" not found; using defaults");
+    }
   }
 
 #pragma endregion CONFIGFILE
-
-  if (ini.getValue("leds", "count", buffer, bufferLen, numLeds))
-  {
-    Serial.print("Got numLeds from config: ");
-    Serial.println(numLeds);
-  }
-  int drumType = 0;
-  if (ini.getValue("drum", "type", buffer, bufferLen, drumType))
-  {
-    Serial.print("Got drum type from config: ");
-    Serial.println(drumType);
-  }
-  ini.close();
 
   Serial.print("Setting up LEDs... ");
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);

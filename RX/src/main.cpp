@@ -17,7 +17,6 @@
 #include <FastLED.h>
 #include <FS.h>
 #include <LittleFS.h>
-#include <SPIFFSIniFile.h>
 
 #include "prototypes.h"
 
@@ -216,52 +215,25 @@ void setup()
 
 #pragma region CONFIGFILE
 
-  // to read config file
-  const byte bufferLen = 80;
-  char buffer[bufferLen];
-
   const char *filename = "/config.ini";
 
-  // Mount the SPIFFS
-  if (!SPIFFS.begin())
+  if (!mountFsWithMigration(filename))
   {
-    Serial.println("SPIFFS.begin() failed");
+    Serial.println("Filesystem mount failed");
     ledMode = -2;
   }
-
-  SPIFFSIniFile ini(filename);
-  if (!ini.open())
+  else
   {
-    Serial.print("ini file ");
-    Serial.print(filename);
-    Serial.println(" does not exist");
-    ledMode = -2;
-  }
-
-  // Check the file is valid. This can be used to warn if any lines
-  // are longer than the buffer.
-  if (!ini.validate(buffer, bufferLen))
-  {
-    Serial.print("ini file ");
-    Serial.print(ini.getFilename());
-    Serial.print(" not valid: ");
-    ledMode = -2;
+    int drumType = 0;
+    if (!readConfig(filename, numLeds, drumType))
+    {
+      Serial.print("Config file ");
+      Serial.print(filename);
+      Serial.println(" not found; using defaults");
+    }
   }
 
 #pragma endregion CONFIGFILE
-
-  if (ini.getValue("leds", "count", buffer, bufferLen, numLeds))
-  {
-    Serial.print("Got numLeds from config: ");
-    Serial.println(numLeds);
-  }
-  int drumType = 0;
-  if (ini.getValue("drum", "type", buffer, bufferLen, drumType))
-  {
-    Serial.print("Got drum type from config: ");
-    Serial.println(drumType);
-  }
-  ini.close();
 
   Serial.print("Setting up LEDs... ");
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);

@@ -15,7 +15,8 @@
 #include <RF24.h>
 #define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
-#include "FS.h"
+#include <FS.h>
+#include <LittleFS.h>
 #include <SPIFFSIniFile.h>
 
 #include "prototypes.h"
@@ -44,6 +45,65 @@ int ledMode = -1;                  // The currently active pattern
 unsigned long IDLETIMEOUT = 30000; // Time to wait before doing our own thing
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
+
+// Read /config.ini from LittleFS. Returns true if the file opened
+// successfully (regardless of which keys were present). Unknown keys
+// and sections are silently ignored, so future config additions are
+// non-breaking.
+static bool readConfig(const char *path, int &numLeds, int &drumType)
+{
+  File f = LittleFS.open(path, "r");
+  if (!f)
+  {
+    return false;
+  }
+
+  char section[16] = "";
+  while (f.available())
+  {
+    String line = f.readStringUntil('\n');
+    line.trim();
+    if (line.length() == 0)
+      continue;
+    if (line.startsWith(";") || line.startsWith("#"))
+      continue;
+
+    if (line.startsWith("["))
+    {
+      int end = line.indexOf(']');
+      if (end > 1)
+      {
+        String s = line.substring(1, end);
+        s.trim();
+        s.toCharArray(section, sizeof(section));
+      }
+      continue;
+    }
+
+    int eq = line.indexOf('=');
+    if (eq < 0)
+      continue;
+    String key = line.substring(0, eq);
+    String val = line.substring(eq + 1);
+    key.trim();
+    val.trim();
+
+    if (strcmp(section, "leds") == 0 && key == "count")
+    {
+      numLeds = val.toInt();
+      Serial.print("Got numLeds from config: ");
+      Serial.println(numLeds);
+    }
+    else if (strcmp(section, "drum") == 0 && key == "type")
+    {
+      drumType = val.toInt();
+      Serial.print("Got drum type from config: ");
+      Serial.println(drumType);
+    }
+  }
+  f.close();
+  return true;
+}
 
 void showStatus(struct CRGB *targetArray, const struct CRGB &color)
 {

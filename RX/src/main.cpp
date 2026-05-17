@@ -166,13 +166,19 @@ void readRadio()
   { // is there a payload?
     int payload;
     radio.read(&payload, sizeof(payload)); // get incoming payload
-    ledMode = payload;
 
-    Serial.print("Radio RX data: ");
-    Serial.println(ledMode);
-
-    // clear all pixels ready for the new mode
-    FastLED.clear();
+    // Idempotent: heartbeats arrive ~10x per second carrying the current
+    // mode. Only react when the mode actually changes — otherwise we'd
+    // wipe running patterns at 10 Hz. This equality guard is also what
+    // keeps mid-strobe heartbeats from re-triggering case 98 (which
+    // restores ledMode to the prior mode after flashing).
+    if (payload != ledMode)
+    {
+      ledMode = payload;
+      Serial.print("Radio RX mode change: ");
+      Serial.println(ledMode);
+      FastLED.clear();
+    }
   }
 }
 
@@ -334,12 +340,21 @@ void loop()
     break;
 
   case 98:
-    // quick white strobe - flashes multiple times because TX resends mode 3 times :-|
-    fill_solid(leds, numLeds, CRGB::White);
-    FastLED.show();
-    FastLED.delay(30);
-    FastLED.clear();
-    ledMode = currentMode; // reinstate the previous mode
+    // 5-flash white strobe — TX now sends mode 98 as a single packet,
+    // so the RX produces all 5 flashes from one receive. Total ~300ms.
+    // Heartbeats arriving during this loop are buffered by the nRF24's
+    // 3-deep RX FIFO and are duplicates of the prior mode, so the
+    // idempotency guard in readRadio() will no-op them after the strobe.
+    for (int i = 0; i < 5; i++)
+    {
+      fill_solid(leds, numLeds, CRGB::White);
+      FastLED.show();
+      FastLED.delay(30);
+      FastLED.clear();
+      FastLED.show();
+      FastLED.delay(30);
+    }
+    ledMode = currentMode; // restore prior mode (load-bearing — otherwise loop re-enters case 98)
     break;
 
   case 99:

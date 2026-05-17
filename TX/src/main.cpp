@@ -174,8 +174,6 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
-    int previousMode = CurrentMode;
-
     if (newMode == AUTO_MODE)
     { // auto
       Serial.printf("AUTO mode set ON\n");
@@ -183,7 +181,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       Serial.printf("CurrentMode randomised to #%d\n", newMode);
       autoDelay.start(AUTO_TIME);
     }
-    else if (previousMode == AUTO_MODE)
+    else if (autoDelay.isRunning())
     {
       autoDelay.stop();
       Serial.printf("AUTO mode set OFF\n");

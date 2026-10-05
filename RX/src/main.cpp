@@ -15,9 +15,8 @@
 #include <RF24.h>
 #define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
-#include "FS.h"
-#include <SPIFFSIniFile.h>
 
+#include "config.h"
 #include "prototypes.h"
 
 #if FASTLED_VERSION < 3001000
@@ -82,52 +81,33 @@ void setup()
 
 #pragma region CONFIGFILE
 
-  // to read config file
-  const byte bufferLen = 80;
-  char buffer[bufferLen];
-
   const char *filename = "/config.ini";
 
-  // Mount the SPIFFS
-  if (!SPIFFS.begin())
+  static IniConfig ini; // static: too large for the stack
+  if (!loadConfig(filename, ini))
   {
-    Serial.println("SPIFFS.begin() failed");
-    ledMode = -2;
-  }
-
-  SPIFFSIniFile ini(filename);
-  if (!ini.open())
-  {
-    Serial.print("ini file ");
-    Serial.print(filename);
-    Serial.println(" does not exist");
-    ledMode = -2;
-  }
-
-  // Check the file is valid. This can be used to warn if any lines
-  // are longer than the buffer.
-  if (!ini.validate(buffer, bufferLen))
-  {
-    Serial.print("ini file ");
-    Serial.print(ini.getFilename());
-    Serial.print(" not valid: ");
     ledMode = -2;
   }
 
 #pragma endregion CONFIGFILE
 
-  if (ini.getValue("leds", "count", buffer, bufferLen, numLeds))
+  if (ini.getValue("leds", "count", numLeds))
   {
     Serial.print("Got numLeds from config: ");
     Serial.println(numLeds);
   }
+  if (numLeds < 1 || numLeds > MAX_LEDS)
+  {
+    Serial.printf("numLeds %d out of range, using %d\n", numLeds, MAX_LEDS);
+    numLeds = MAX_LEDS;
+    ledMode = -2;
+  }
   int drumType = 0;
-  if (ini.getValue("drum", "type", buffer, bufferLen, drumType))
+  if (ini.getValue("drum", "type", drumType))
   {
     Serial.print("Got drum type from config: ");
     Serial.println(drumType);
   }
-  ini.close();
 
   Serial.print("Setting up LEDs... ");
   FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, numLeds).setCorrection(TypicalPixelString);

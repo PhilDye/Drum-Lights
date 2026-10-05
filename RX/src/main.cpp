@@ -37,7 +37,7 @@ const byte address[5] = {'R', 'x', 'A', 'A', '1'};
 #define MAX_MA 2000
 #define FRAMES_PER_SECOND 35
 byte max_bright = 255;      // Overall brightness definition, could be changed on the fly
-struct CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
+CRGB leds[MAX_LEDS]; // The array of leds, one for each led in the strip
 int numLeds = MAX_LEDS;     // To be read from config later
 
 int ledMode = -1;                  // The currently active pattern
@@ -45,7 +45,7 @@ unsigned long IDLETIMEOUT = 30000; // Time to wait before doing our own thing
 
 void (*resetFunc)(void) = 0; // declare reset function @ address 0
 
-void showStatus(struct CRGB *targetArray, const struct CRGB &color)
+void showStatus(CRGB *targetArray, const CRGB &color)
 {
   EVERY_N_MILLIS(1000)
   {
@@ -57,7 +57,7 @@ void showStatus(struct CRGB *targetArray, const struct CRGB &color)
   }
 }
 
-void showError(struct CRGB *targetArray, const struct CRGB &color)
+void showError(CRGB *targetArray, const CRGB &color)
 {
   EVERY_N_MILLIS(300)
   {

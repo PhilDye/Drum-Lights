@@ -12,28 +12,28 @@ extern const TProgmemRGBPalette16 PotassiumFireColors_p FL_PROGMEM = {CRGB::Blac
 
 // 11-18    // green, yellow, blue, red, white, cyan, magenta, orange
 // 21-      // bicolor chases
-void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1 = CRGB::Black);
+void chase(CRGB *targetArray, int numLeds, const CRGB &color0, const CRGB &color1 = CRGB::Black);
 
 // 50
-void fire(struct CRGB *targetArray, int numLeds, const struct CRGBPalette16 &colorPalette);
+void fire(CRGB *targetArray, int numLeds, const CRGBPalette16 &colorPalette);
 
 // 61-      // bicolor twinkles
 // 81-88    // single color twinkles (green, yellow, blue, red, white, cyan, magenta, orange)
-void colorTwinkle(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1 = CRGB::Black, const struct CRGB &color2 = CRGB::Black);
+void colorTwinkle(CRGB *targetArray, int numLeds, const CRGB &color0, const CRGB &color1 = CRGB::Black, const CRGB &color2 = CRGB::Black);
 
 // 91-93
-void rioSpin(struct CRGB *targetArray, int numLeds);
-void rioDisco(struct CRGB *targetArray, int numLeds);
-void rioFlag(struct CRGB *targetArray, int numLeds);
+void rioSpin(CRGB *targetArray, int numLeds);
+void rioDisco(CRGB *targetArray, int numLeds);
+void rioFlag(CRGB *targetArray, int numLeds);
 
 // 97
-void hazards(struct CRGB *targetArray, int numLeds);
+void hazards(CRGB *targetArray, int numLeds);
 
 // 98
 // strobe
 
 // 99
-void rainbow(struct CRGB *targetArray, int numLeds);
+void rainbow(CRGB *targetArray, int numLeds);
 
 // 199 blue strobe
-void nineninenine(struct CRGB *targetArray, int numLeds);
+void nineninenine(CRGB *targetArray, int numLeds);

@@ -2,7 +2,7 @@
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
-void hazards(struct CRGB *targetArray, int numLeds)
+void hazards(CRGB *targetArray, int numLeds)
 {
     size_t quartiles = numLeds / 4;
     const size_t size = 4;
@@ -23,7 +23,7 @@ void hazards(struct CRGB *targetArray, int numLeds)
     }
 }
 
-void nineninenine(struct CRGB *targetArray, int numLeds)
+void nineninenine(CRGB *targetArray, int numLeds)
 {
     size_t quarter = numLeds / 4;
 

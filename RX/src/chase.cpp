@@ -1,6 +1,6 @@
 #include <FastLED.h>
 
-void chase(struct CRGB *targetArray, int numLeds, const struct CRGB &color0, const struct CRGB &color1 = CRGB::Black)
+void chase(CRGB *targetArray, int numLeds, const CRGB &color0, const CRGB &color1 = CRGB::Black)
 {
 
   static uint8_t i = 0;

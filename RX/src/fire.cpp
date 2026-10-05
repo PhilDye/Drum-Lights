@@ -2,7 +2,7 @@
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
-void fire(struct CRGB *targetArray, int numLeds, const struct CRGBPalette16 &colorPalette)
+void fire(CRGB *targetArray, int numLeds, const CRGBPalette16 &colorPalette)
 {
 // COOLING: How quickly does each cell cool down?
 // Less cooling = longer-lived flames.  More cooling = shorter-lived flames.

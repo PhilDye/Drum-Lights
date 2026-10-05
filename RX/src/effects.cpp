@@ -2,7 +2,7 @@
 
 #define MAX_LEDS 104 // Maximum number of LEDS to initialise for
 
-void rioSpin(struct CRGB *targetArray, int numLeds)
+void rioSpin(CRGB *targetArray, int numLeds)
 {
     const uint8_t SEGMENTS = 3;
     uint8_t stripeLength = numLeds / SEGMENTS; // number of pixels per color
@@ -38,7 +38,7 @@ void rioSpin(struct CRGB *targetArray, int numLeds)
     }
 }
 
-void rioFlag(struct CRGB *targetArray, int numLeds)
+void rioFlag(CRGB *targetArray, int numLeds)
 {
 
     static int offset = 0;
@@ -100,7 +100,7 @@ void rioFlag(struct CRGB *targetArray, int numLeds)
     }
 }
 
-void rainbow(struct CRGB *targetArray, int numLeds)
+void rainbow(CRGB *targetArray, int numLeds)
 {
     uint8_t thisHue = beat8(60, 255);
     fill_rainbow(targetArray, numLeds, thisHue, 7);

@@ -251,8 +251,6 @@ void initBLE()
   int infoLen = snprintf(infoMsg, sizeof(infoMsg), "{\"proto\":%d,\"fw\":\"%s\",\"catalogue\":%d}", PROTOCOL_VERSION, FIRMWARE_VERSION, CATALOGUE_VERSION);
   info->setValue((const uint8_t *)infoMsg, min((size_t)infoLen, sizeof(infoMsg) - 1));
 
-  service->start();
-
   // a 128-bit UUID plus the name won't fit in 31 bytes, so the name goes in the scan response
   NimBLEAdvertisementData advData;
   advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);

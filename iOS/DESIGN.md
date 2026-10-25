@@ -128,35 +128,42 @@ The RF24 link uses fixed 32-byte payloads with dynamic payloads off. The TX writ
 
 ## 4. One mode catalogue for every UI
 
-Today the mode numbers live in four places: RX `switch`, TX `autoModes[]`, the web UI's hand-written buttons, and `RX/src/prototypes.h` comments. Adding an app would make five. Instead, add `TX/app/src/modes.json` as the single source for the UIs:
+Mode numbers used to live in four places: the RX `switch`, the TX `autoModes[]`, the web UI's hand-written buttons, and the `RX/src/prototypes.h` comments. An app would have made five. [`TX/app/src/modes.json`](../TX/app/src/modes.json) is now the single source for the UIs. In outline:
 
 ```json
 {
   "catalogue": 1,
   "colours": {
-    "green":  {"name": "Green",  "rgb": "#00C853"},
-    "yellow": {"name": "Yellow", "rgb": "#FFD600"},
-    "blue":   {"name": "Blue",   "rgb": "#2962FF"}
+    "green":  { "name": "Green",  "fastled": "Green",  "hex": "#008000" },
+    "yellow": { "name": "Yellow", "fastled": "Gold",   "hex": "#FFD700" }
   },
   "effects": [
-    {"id": "solid",   "name": "Solid",   "symbol": "circle.fill",
-     "modes": {"green": 1, "yellow": 2, "blue": 3, "red": 4, "white": 5, "cyan": 6, "pink": 7, "orange": 8}},
-    {"id": "chase",   "name": "Chase",   "symbol": "arrow.trianglehead.clockwise",
-     "modes": {"green": 11, "yellow": 12, "green+red": 21, "yellow+blue": 22}},
-    {"id": "special", "name": "Specials",
-     "items": [
-       {"name": "Rio Spin", "mode": 91},
-       {"name": "999", "mode": 199, "confirm": true}
-     ]}
+    { "id": "solid", "name": "Solid",
+      "modes": [ { "mode": 1, "colours": ["green"] }, { "mode": 2, "colours": ["yellow"] } ] },
+    { "id": "chase", "name": "Chase",
+      "modes":     [ { "mode": 11, "colours": ["green"] } ],
+      "twoColour": [ { "mode": 21, "colours": ["green", "red"] } ] },
+    { "id": "fx", "name": "Effects",
+      "modes": [ { "mode": 91, "name": "Rio Spin" },
+                 { "mode": 199, "name": "999", "confirm": { "title": "999 Mode", "message": "Activate blue strobes?" } } ] }
   ],
-  "actions": {"off": 0, "auto": -1, "strobe": 98},
+  "actions": { "off": 0, "auto": -1, "strobe": 98 },
   "auto": [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 81, 82, 83, 84, 85, 86, 87, 88]
 }
 ```
 
-- The web UI (Vite) imports it and renders buttons from it instead of hard-coded HTML. Vite copies it into `data/` so the TX serves it too.
-- The app bundles a copy and compares `catalogue` against the TX Info characteristic. On mismatch it shows "Transmitter has newer effects; update the app" and still works for known modes. (Fetching the catalogue over BLE is possible but needs chunking past 512 bytes; not worth it while effects change a few times a year.)
-- A small build step can generate the TX `autoModes[]` from it, or leave that hand-maintained and add a check.
+- **Colours:** each colour records the FastLED colour the RX uses for it and its hex value. "Pink" is `CRGB::Indigo` on the LEDs.
+- **Labels:** a mode is labelled by `name`, or by its colour names joined with "/".
+- **Order and layout:** effects and modes are listed in display order. On the web page, two-colour modes sit beside the single colour they start with.
+- **Web UI:** it imports the file and renders its tabs and buttons from it. Strobe, Off and Auto keep their fixed places on the page and take their numbers from `actions`.
+- **Served by the TX:** the Vite build copies the file into `data/`, so the TX serves `/modes.json`.
+- **Build check** (`TX/app/catalogue-plugin.js`): the build fails, locally and in CI, if:
+  - `catalogue` differs from `CATALOGUE_VERSION` in the TX firmware
+  - `auto` differs from the TX `autoModes[]`
+  - any mode lacks a case in the RX `switch`
+  - a mode is listed twice
+  - a mode uses an unknown colour
+- **The app:** it bundles a copy and compares `catalogue` against the TX state message (and later the BLE Info characteristic). On mismatch it shows "Transmitter has newer effects; update the app" and still works for known modes. Fetching the catalogue over BLE is possible but needs chunking past 512 bytes; it isn't worth it while effects change a few times a year.
 
 ## 5. The app
 

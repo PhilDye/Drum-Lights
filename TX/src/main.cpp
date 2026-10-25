@@ -53,7 +53,7 @@ int CurrentMode = 0;
 #define FIRMWARE_VERSION "unknown" // normally set from git by version.py
 #endif
 const int PROTOCOL_VERSION = 1;  // bump on incompatible changes to the controller messages
-const int CATALOGUE_VERSION = 1; // bump whenever modes are added, removed or renumbered
+const int CATALOGUE_VERSION = 1; // bump whenever modes are added, removed or renumbered, with "catalogue" in TX/app/src/modes.json
 
 const unsigned long AUTO_TIME = 30000; // in mS
 const int AUTO_MODE = -1;
@@ -65,6 +65,7 @@ millisDelay autoDelay; // the delay object
 const UBaseType_t MODE_QUEUE_LENGTH = 8;
 QueueHandle_t modeQueue;
 
+// keep in step with "auto" in TX/app/src/modes.json (the web build checks)
 const int autoModes[24] = {
     1, 2, 3, 4, 5, 6, 7, 8,
     11, 12, 13, 14, 15, 16, 17, 18,

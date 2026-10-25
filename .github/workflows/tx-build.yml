@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'TX/**'
+      - 'RX/src/main.cpp'
       - '.github/workflows/tx-build.yml'
   pull_request:
     paths:
       - 'TX/**'
+      - 'RX/src/main.cpp'
       - '.github/workflows/tx-build.yml'
   workflow_dispatch:
 
@@ -97,3 +99,23 @@ jobs:
       - name: Run cppcheck
         working-directory: TX
         run: pio check --skip-packages --src-filters="+<src/> +<lib/>" --flags="--suppress=*:*.pio/*" --severity=medium --severity=high --fail-on-defect=high
+
+  web:
+    # also checks TX/app/src/modes.json against the TX and RX firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: TX/app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: TX/app
+        run: npm ci
+
+      - name: Build web UI
+        working-directory: TX/app
+        run: npm run build

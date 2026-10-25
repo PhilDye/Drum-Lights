@@ -4,16 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - 'RX/src/**'
-      - 'TX/src/**'
-      - 'TX/app/src/index.html'
+      - 'RX/src/main.cpp'
+      - 'TX/src/main.cpp'
       - '.github/scripts/check_protocol.py'
       - '.github/workflows/protocol-sync.yml'
   pull_request:
     paths:
-      - 'RX/src/**'
-      - 'TX/src/**'
-      - 'TX/app/src/index.html'
+      - 'RX/src/main.cpp'
+      - 'TX/src/main.cpp'
       - '.github/scripts/check_protocol.py'
       - '.github/workflows/protocol-sync.yml'
   workflow_dispatch:
@@ -28,5 +26,5 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Check RX/TX protocol agreement
+      - name: Check RX/TX pipe address
         run: python .github/scripts/check_protocol.py

@@ -39,4 +39,45 @@ jobs:
 
       - name: Build RX firmware
         working-directory: RX
-        run: pio run
+        shell: bash
+        run: pio run 2>&1 | tee build.log
+
+      - name: Firmware size report
+        if: always()
+        working-directory: RX
+        shell: bash
+        run: |
+          {
+            echo "### RX firmware size"
+            echo '```'
+            grep -E '^(RAM|Flash):' build.log || echo "no size info (build failed?)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-check-rx-${{ runner.os }}-${{ hashFiles('RX/platformio.ini') }}
+          restore-keys: |
+            pio-check-rx-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Run cppcheck
+        working-directory: RX
+        run: pio check --skip-packages --severity=medium --severity=high --fail-on-defect=high

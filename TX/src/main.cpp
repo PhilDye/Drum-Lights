@@ -23,6 +23,10 @@
 
 #include <secrets.h>
 
+#ifdef BLE_SPIKE
+#include <NimBLEDevice.h>
+#endif
+
 // Setup the network
 const byte DNS_PORT = 53;
 const byte HTTP_PORT = 80;
@@ -70,6 +74,32 @@ const int autoModes[24] = {
     1, 2, 3, 4, 5, 6, 7, 8,
     11, 12, 13, 14, 15, 16, 17, 18,
     81, 82, 83, 84, 85, 86, 87, 88};
+
+#ifdef SPIKE
+// Phase 1 BLE coexistence spike (#19): counters for the soak test telemetry.
+// Each has a single writer task, so plain volatile is enough for reporting
+volatile uint32_t spikeWsCommands = 0;
+volatile uint32_t spikeWsDisconnects = 0;
+volatile uint32_t spikeBleCommands = 0;
+volatile uint32_t spikeBleConnects = 0;
+uint32_t spikeModesApplied = 0;
+#endif
+
+#ifdef BLE_SPIKE
+// Throwaway GATT service from iOS/DESIGN.md section 3.2 (no passkey/bonding yet)
+#ifndef BLE_NAME
+#define BLE_NAME "Drum Lights TX" // override in secrets.h so neighbouring bands don't collide
+#endif
+#define BLE_SERVICE_UUID "9A9476F2-AE0D-406A-847A-D0FECAF34CE5"
+#define BLE_STATE_UUID "E1EBAF93-75C1-4681-8F5B-D07D93D86FDE"
+#define BLE_COMMAND_UUID "53F118A7-863E-429A-BF92-AC19864C8219"
+#define BLE_INFO_UUID "B1AB44F5-A9A1-4152-852B-50A7D7EC8427"
+
+NimBLEServer *bleServer = nullptr;
+NimBLECharacteristic *bleState = nullptr;
+
+void requestMode(int mode);
+#endif
 
 class CaptiveRequestHandler : public AsyncWebHandler
 {
@@ -156,8 +186,90 @@ size_t buildStateMessage(char *msg, size_t msgSize)
   return serializeJson(json, msg, msgSize);
 }
 
+#ifdef BLE_SPIKE
+// State characteristic: int32 mode (LE) + uint8 flags (bit 0 = auto running)
+void setBLEState()
+{
+  uint8_t value[5];
+  int32_t mode = CurrentMode;
+  memcpy(value, &mode, sizeof(mode)); // the ESP32 is little-endian
+  value[4] = autoDelay.isRunning() ? 0x01 : 0x00;
+  bleState->setValue(value, sizeof(value));
+}
+
+class SpikeServerCallbacks : public NimBLEServerCallbacks
+{
+  void onConnect(NimBLEServer *server, NimBLEConnInfo &connInfo) override
+  {
+    spikeBleConnects++;
+    Serial.printf("BLE client %s connected (%u total)\n", connInfo.getAddress().toString().c_str(), server->getConnectedCount());
+    NimBLEDevice::startAdvertising(); // keep advertising so more controllers can connect
+  }
+
+  void onDisconnect(NimBLEServer *server, NimBLEConnInfo &connInfo, int reason) override
+  {
+    Serial.printf("BLE client %s disconnected, reason %d\n", connInfo.getAddress().toString().c_str(), reason);
+  }
+};
+
+class SpikeCommandCallbacks : public NimBLECharacteristicCallbacks
+{
+  // runs on the NimBLE host task, so hand the mode to the loop task
+  void onWrite(NimBLECharacteristic *characteristic, NimBLEConnInfo &connInfo) override
+  {
+    NimBLEAttValue value = characteristic->getValue();
+    if (value.size() != sizeof(int32_t))
+    {
+      Serial.printf("BLE command ignored, %u bytes\n", value.size());
+      return;
+    }
+
+    int32_t mode;
+    memcpy(&mode, value.data(), sizeof(mode));
+    spikeBleCommands++;
+    requestMode(mode);
+  }
+};
+
+void initBLE()
+{
+  NimBLEDevice::init(BLE_NAME);
+
+  bleServer = NimBLEDevice::createServer();
+  bleServer->setCallbacks(new SpikeServerCallbacks());
+
+  NimBLEService *service = bleServer->createService(BLE_SERVICE_UUID);
+
+  bleState = service->createCharacteristic(BLE_STATE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+  setBLEState();
+
+  NimBLECharacteristic *command = service->createCharacteristic(BLE_COMMAND_UUID, NIMBLE_PROPERTY::WRITE);
+  command->setCallbacks(new SpikeCommandCallbacks());
+
+  NimBLECharacteristic *info = service->createCharacteristic(BLE_INFO_UUID, NIMBLE_PROPERTY::READ);
+  char infoMsg[STATE_MSG_SIZE];
+  int infoLen = snprintf(infoMsg, sizeof(infoMsg), "{\"proto\":%d,\"fw\":\"%s\",\"catalogue\":%d}", PROTOCOL_VERSION, FIRMWARE_VERSION, CATALOGUE_VERSION);
+  info->setValue((const uint8_t *)infoMsg, min((size_t)infoLen, sizeof(infoMsg) - 1));
+
+  service->start();
+
+  // a 128-bit UUID plus the name won't fit in 31 bytes, so the name goes in the scan response
+  NimBLEAdvertisementData advData;
+  advData.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
+  advData.addServiceUUID(service->getUUID());
+  NimBLEAdvertisementData scanData;
+  scanData.setName(BLE_NAME);
+
+  NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
+  advertising->setAdvertisementData(advData);
+  advertising->setScanResponseData(scanData);
+  advertising->start();
+
+  Serial.println("BLE advertising as " BLE_NAME);
+}
+#endif
+
 // Tell every connected controller the current state
-// (only WebSocket clients for now; BLE will hook in here too)
 void notifyAll()
 {
   char msg[STATE_MSG_SIZE];
@@ -165,6 +277,11 @@ void notifyAll()
   ws.textAll(msg, len);
 
   Serial.printf("State broadcasted to WS: %s\n", msg);
+
+#ifdef BLE_SPIKE
+  setBLEState();
+  bleState->notify();
+#endif
 }
 
 void sendStateToClient(AsyncWebSocketClient *client)
@@ -201,6 +318,9 @@ void sendMode(int mode)
 void applyMode(int newMode)
 {
   Serial.printf("Mode #%d requested\n", newMode);
+#ifdef SPIKE
+  spikeModesApplied++;
+#endif
 
   if (newMode == AUTO_MODE)
   {
@@ -268,6 +388,9 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
+#ifdef SPIKE
+    spikeWsCommands++;
+#endif
     requestMode(json["mode"].as<int>());
   }
 }
@@ -288,6 +411,9 @@ void onWSEvent(AsyncWebSocket *server,
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
+#ifdef SPIKE
+    spikeWsDisconnects++;
+#endif
     break;
   case WS_EVT_DATA:
     Serial.printf("WebSocket data received\n");
@@ -337,6 +463,85 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
   vTaskDelay(100 / portTICK_PERIOD_MS); // Add a small delay
 }
 
+#ifdef SPIKE
+const unsigned long TELEMETRY_TIME = 10000; // in mS
+millisDelay telemetryDelay;
+
+// RF test: alternate strobe with the solid colours 1-8, so every step differs from the
+// last and a receiver's log shows each change it missed (score with tools/spike/rf_score.py)
+const int RF_TEST_STEPS = 200;
+const unsigned long RF_TEST_TIME = 400; // in mS, between steps
+millisDelay rfTestDelay;
+int rfTestStep = 0;
+
+int rfTestMode(int step)
+{
+  return step % 2 ? STROBE_MODE : 1 + (step / 2) % 8;
+}
+
+void printTelemetry()
+{
+  Serial.printf("SPIKE t=%lus heap=%u minheap=%u maxblock=%u ws=%u wsCmd=%u wsDisc=%u",
+                millis() / 1000, ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(),
+                ws.count(), spikeWsCommands, spikeWsDisconnects);
+#ifdef BLE_SPIKE
+  Serial.printf(" ble=%u bleConn=%u bleCmd=%u", bleServer->getConnectedCount(), spikeBleConnects, spikeBleCommands);
+#endif
+  Serial.printf(" applied=%u\n", spikeModesApplied);
+}
+
+void printSpikeBanner()
+{
+  Serial.printf("SPIKE boot reset=%d sketch=%u freesketch=%u fw=%s ble=%s\n",
+                esp_reset_reason(), ESP.getSketchSize(), ESP.getFreeSketchSpace(), FIRMWARE_VERSION,
+#ifdef BLE_SPIKE
+                "on"
+#else
+                "off"
+#endif
+  );
+  Serial.println("SPIKE serial commands: r = start RF test, x = stop RF test, t = telemetry now");
+}
+
+// Serial commands and periodic telemetry; called from loop()
+void spikeLoop()
+{
+  while (Serial.available())
+  {
+    switch (Serial.read())
+    {
+    case 'r':
+      rfTestStep = 0;
+      rfTestDelay.start(RF_TEST_TIME);
+      Serial.printf("RFTEST start steps=%d interval=%lums\n", RF_TEST_STEPS, RF_TEST_TIME);
+      break;
+    case 'x':
+      rfTestDelay.stop();
+      Serial.printf("RFTEST stopped at step %d\n", rfTestStep);
+      break;
+    case 't':
+      printTelemetry();
+      break;
+    }
+  }
+
+  if (rfTestDelay.justFinished())
+  {
+    requestMode(rfTestMode(rfTestStep++));
+    if (rfTestStep < RF_TEST_STEPS)
+      rfTestDelay.repeat();
+    else
+      Serial.printf("RFTEST done steps=%d\n", rfTestStep);
+  }
+
+  if (telemetryDelay.justFinished())
+  {
+    telemetryDelay.repeat();
+    printTelemetry();
+  }
+}
+#endif
+
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -372,6 +577,15 @@ void setup()
 
   initWebSocket();
 
+#ifdef BLE_SPIKE
+  initBLE();
+#endif
+
+#ifdef SPIKE
+  printSpikeBanner();
+  telemetryDelay.start(TELEMETRY_TIME);
+#endif
+
   Serial.println("Ready; HTTP server started on " + WiFi.softAPIP().toString());
 }
 
@@ -395,4 +609,8 @@ void loop()
   {
     nextAutoMode();
   }
+
+#ifdef SPIKE
+  spikeLoop();
+#endif
 }

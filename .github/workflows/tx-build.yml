@@ -50,7 +50,19 @@ jobs:
 
       - name: Build TX firmware
         working-directory: TX
-        run: pio run
+        shell: bash # pipefail, so a failed build isn't hidden by tee
+        run: pio run -e az-delivery-devkit-v4 -e spike-baseline -e spike-ble | tee build.log
+
+      # the BLE spike (#19) needs the flash and RAM numbers side by side
+      - name: Report firmware sizes
+        working-directory: TX
+        run: |
+          {
+            echo '### TX firmware size'
+            echo '```'
+            grep -E '^Processing |^(RAM|Flash):' build.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   web:
     # also checks TX/app/src/modes.json against the TX and RX firmware

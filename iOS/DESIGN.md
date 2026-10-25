@@ -37,7 +37,7 @@ Goals:
 
 1. One-hand, eyes-mostly-up control during a performance, with confirmation by touch (haptics) rather than by looking.
 2. No WiFi switching. Phone keeps internet; the app talks to the TX directly.
-3. Let the operator build shortlists (palettes) of the patterns they actually use, then jump straight to any of them with one tap, from the phone, the lock screen, a keyboard/pedal or the watch. Performances follow the music, not a script, so this is a palette to pick from, not a playlist to step through.
+3. Let the operator build shortlists (palettes) of the patterns they actually use, then jump straight to any of them with one tap, from the phone, the lock screen, the Action Button or the watch. Performances follow the music, not a script, so this is a palette to pick from, not a playlist to step through.
 4. Stay in sync with any other controllers (web or app) at the same time.
 5. Change nothing on the receivers. Every RX on every drum keeps its current firmware.
 
@@ -215,21 +215,20 @@ The web UI makes you pick a tab, then read a word ("Green"). The app turns that 
 - A Palette is a named, ordered shortlist of modes (e.g. "Fireworks night", "Carnival parade", "Favourites"). Order only sets tile position; there is no "next".
 - The tab shows palette chips across the top and the selected palette's tiles as a 2-column grid. Tap any tile to switch to that mode instantly. Reorder by drag in Edit.
 - The star next to the mode name on Live adds or removes that mode from the currently selected palette, so building a palette happens while browsing.
-- Tiles carry their slot number (1 to 9) in the corner.
 - "Play full screen" turns the palette into a performance view: every tile as large as the screen allows, the active tile outlined with a glow on its colour strip, a "Now:" line with the current mode, and Off / Strobe / Auto along the bottom. The screen stays awake (`isIdleTimerDisabled`) and a Live Activity starts.
-- Keyboards and Bluetooth pedals (which present as keyboards) map keys 1 to 9 to the first nine tiles and Space to Strobe, via `.onKeyPress`. A cheap 2 to 4 button pedal covers Strobe plus the top few tiles. The Play view doesn't print this; it is a setting, not something to read mid-show.
+- There is no keyboard or pedal control, in the app or on the web.
 
 ```
 ┌──────────────────────────────┐
 │ Done   Fireworks night   ● BLE│  (mockup adds watch/lock preview buttons here)
 │ Now: Rio Spin      Sent to TX│
 │ ┌────────────┐┌────────────┐ │
-│ │Blue Chase 1││Rio Spin   2│ │  active tile outlined
+│ │Blue Chase  ││Rio Spin    │ │  active tile outlined
 │ └────────────┘└────────────┘ │
 │ ┌────────────┐┌────────────┐ │
-│ │Yel/Blu Tw 3││Rainbow    4│ │
+│ │Yel/Blu Tw  ││Rainbow     │ │
 │ └────────────┘└────────────┘ │
-│        ... up to 9 ...       │
+│            ...               │
 │ [Off]  [   STROBE   ] [Auto] │
 └──────────────────────────────┘
 ```
@@ -249,7 +248,7 @@ The web UI makes you pick a tab, then read a word ("Green"). The app turns that 
 | 999 | Modal dialog: "Activate?" then confirm | Press-and-hold for ~0.6 s with a bar filling behind the label and a haptic at completion. Just as safe against accidental taps, much faster, no dialog to dismiss. |
 | Disconnection | Full-screen "Disconnected" modal blocks everything | Status pill turns amber ("Reconnecting…"), controls dim and stop accepting taps, reconnect happens silently; a haptic when it comes back. Commands are not queued: a stale "Blue" sent 20 s late is worse than nothing. |
 | Auto | Button sends -1, never shows active | Auto badge on the ring, Auto button stays highlighted, shows the mode Auto picked |
-| Hands busy | Must unlock phone, find the tab | Action Button, lock screen, watch, foot pedal |
+| Hands busy | Must unlock phone, find the tab | Action Button, lock screen, watch |
 
 An honest limit: the app can confirm that the **TX** accepted a command. It cannot confirm that drums received it, because RF24 auto-ack is off and receivers never transmit. The UI must not imply otherwise ("Sent", not "Delivered").
 
@@ -288,7 +287,6 @@ The web UI remains the only option for Android and for anyone who just walked up
 - Show real state on connect and show Auto as active (needs the firmware fixes in 3.5).
 - Replace the blocking "Disconnected" modal with a status banner.
 - Hold-to-confirm for 999 (filling bar) instead of a modal.
-- Keyboard shortcuts (1 to 9, Space for Strobe), so a Bluetooth pedal or keyboard works on the web too.
 - Optional: a single palette in `localStorage` (they survive on the same phone, though the captive-portal browser may clear them; say so in the UI).
 
 Forward-looking option: the BLE service also unlocks **Web Bluetooth on Android Chrome**. A copy of the web UI hosted on a normal HTTPS site (e.g. GitHub Pages) could talk to the TX over BLE, giving Android operators the "no WiFi switching" benefit without a native Android app. Safari does not support Web Bluetooth, so this does nothing for iOS.
@@ -308,7 +306,7 @@ Forward-looking option: the BLE service also unlocks **Web Bluetooth on Android 
 | 0 | TX fixes from 3.5, `applyMode()` refactor, state on connect, `modes.json`, web UI renders from it | 1 to 2 days | Better web UI, foundation for app |
 | 1 | BLE spike (risk 1 and 2) | 1 day | Go / no-go for the app |
 | 2 | TX BLE service with passkey bonding; app Live tab over BLE, WebSocket fallback; haptics | 1 to 2 weeks (hobby pace) | Usable app |
-| 3 | Palettes, Play view, keyboard/pedal support, App Intents, Action Button, Control Centre, Live Activity | 1 week | The features that justify the app |
+| 3 | Palettes, Play view, App Intents, Action Button, Control Centre, Live Activity | 1 week | The features that justify the app |
 | 4 | Watch app | 3 to 5 days | Hands-busy control |
 
 Phase 0 is worth doing even if nothing after it happens.
@@ -318,7 +316,7 @@ Phase 0 is worth doing even if nothing after it happens.
 - `DrumLightsKit` unit tests: catalogue parsing, protocol encode/decode, palette editing, reconnect logic against `MockTransport`.
 - SwiftUI previews and the Simulator run on `MockTransport` (same idea as the web UI's dev-mode echo server).
 - BLE needs a real device and a TX on the bench; keep one spare TX and two receivers as a test rig.
-- Before each season: a rehearsal using a palette with the screen locked, switching only from the lock screen, Action Button, watch and pedal.
+- Before each season: a rehearsal using a palette with the screen locked, switching only from the lock screen, Action Button and watch.
 
 ## 10. Later ideas (deliberately parked)
 

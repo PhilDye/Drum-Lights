@@ -43,7 +43,7 @@ The `Component` class in `Main.dc.html` doubles as an executable spec:
   - Strobe: all dots flash white.
 - **Auto rules**: `setMode()` stops Auto for every mode except Strobe, matching [PhilDye/Drum-Lights#15](https://github.com/PhilDye/Drum-Lights/issues/15). In the mockup Auto changes every 5 s; the real TX changes every 30 s.
 - **Timings**: Strobe repeats every 300 ms while held; 999 needs a 600 ms hold; "Sent to TX" shows for 1.2 s.
-- **Palettes**: the shape is `{ name, ids: [mode numbers] }`. Tile slot numbers are 1 to 9. The star on Live adds the current mode to, or removes it from, the selected palette.
+- **Palettes**: the shape is `{ name, ids: [mode numbers] }`. The star on Live adds the current mode to, or removes it from, the selected palette.
 - **Live Activity status line** (`lockSub`):
   - "Auto is choosing"
   - "Not in this palette"
@@ -74,6 +74,6 @@ The Live tab was hand-tuned on the canvas after the doc's sketch was written:
 
 Where these files and the doc's sketches differ on layout, these files are the more recent.
 
-The keyboard/pedal hint was also deliberately removed from the Play view. Keys 1 to 9 and Space still apply, but are documented in Settings rather than shown on screen.
+The tiles' slot numbers (1 to 9) in `Main.dc.html` are left over from a dropped keyboard/pedal idea: there is no keyboard or pedal control, so leave them out of the app.
 
 The example palettes ("Fireworks night", "Carnival parade", "Favourites"), the date and time, and the placeholders `[YOUR SSID]` and `[TX VERSION]` are sample content.

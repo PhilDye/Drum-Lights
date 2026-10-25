@@ -196,8 +196,8 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       Serial.printf("CurrentMode randomised to #%d\n", newMode);
       autoDelay.start(AUTO_TIME);
     }
-    else if (autoDelay.isRunning())
-    {
+    else if (newMode != 98 && autoDelay.isRunning())
+    { // strobe is a one-shot, so leave auto running
       autoDelay.stop();
       Serial.printf("AUTO mode set OFF\n");
     }

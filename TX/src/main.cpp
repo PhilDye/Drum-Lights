@@ -318,15 +318,17 @@ void loop()
 
   if (autoDelay.justFinished())
   {
+    // justFinished() stops the delay, so restart it before notifying,
+    // otherwise clients are told auto is off
+    autoDelay.repeat();
+    Serial.println("autoDelay restarted");
+
     // set a random mode
     CurrentMode = autoModes[random(24)];
     Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
 
     broadcastRF();
     notifyClients();
-
-    autoDelay.repeat(); // repeat
-    Serial.println("autoDelay restarted");
   }
 
   delay(DNS_INTERVAL);  // seems to help with stability, if you are doing other things in the loop this may not be needed

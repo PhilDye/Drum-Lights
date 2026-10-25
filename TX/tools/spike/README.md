@@ -188,10 +188,24 @@ Two things learned along the way:
 - **`ble_min` is a clean minimal reproduction** — pure NimBLE, ~90 lines, no WiFi. That rules out our firmware's complexity entirely and makes this suitable to file upstream as-is.
 - **The bug is intermittent per abort.** One deliberate abort left advertising healthy; the reliability runs show it firing after a few cycles. So "abort kills advertising" is probabilistic, not every time — which is why early manual testing gave such confusing, inconsistent results.
 
+### Faster advertising interval — tried, not a fix
+
+`setMinInterval(32)` / `setMaxInterval(48)` in `initBLE()` — 20-30 ms, the floor for connectable undirected advertising, against NimBLE's slower default. The theory was that more advertising events per second gives a central more chances to land its connection request, attacking both the failure rate and the latency. Overridable via `ADV_MIN_INTERVAL` / `ADV_MAX_INTERVAL` to A/B it.
+
+| Run | Success | Median connect |
+| --- | --- | --- |
+| Baseline (default interval), 10 cycles | 8/10 (80%) | 4.4 s |
+| Fast interval, 10 cycles | 9/10 (90%) | 3.3 s |
+| **Fast interval, 20 cycles** | **14/20 (70%)** | **3.0 s** |
+
+**Not a fix.** The first 10-cycle run looked like a clear win at 9/10 and it was simply luck — doubling the sample put it at 70%, i.e. indistinguishable from the 80% baseline. Worth remembering when judging any future candidate fix here: **10 cycles is not enough to tell 70% from 90%, so run at least 20 before believing a result.**
+
+Latency may be genuinely slightly better (median 4.4 s → 3.0 s across the larger sample), which is a real if small gain, and there is no downside to advertising faster for a peripheral that wants to be found quickly. The change is therefore kept. But 3 s and 70% is not usable, so this does not change the picture.
+
 **Worth trying next, in order:**
 
 1. ~~Measure from a real iPhone~~ — **done, see above.** Same 80% / 4-10 s as the Mac, so the fault is the ESP32.
-2. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms, currently NimBLE's default). Now the single best remaining lead: more advertising events per second means more chances for a connection request to land cleanly, which plausibly attacks both the abort rate *and* the multi-second latency. Cheap to try against `ble_min`, and the one idea on this list that could plausibly move 80% to something usable.
+2. ~~Faster advertising interval~~ — **done, see above.** Marginal latency gain, no reliability gain.
 3. File it upstream against NimBLE-Arduino and/or esp-idf, using `ble_min` as the reproduction: an aborted connection attempt can leave the controller not advertising while the host's `isAdvertising()` still returns true, with no GAP event raised, so `start()` no-ops and only `stop()`+`start()` recovers. Reproduced on espressif32 7.1.3 and 8.0.0, NimBLE-Arduino 2.5.2. Related but not identical: [project-chip/connectedhomeip#74202](https://github.com/project-chip/connectedhomeip/issues/74202).
 3. Try a different NimBLE-Arduino version against `ble_min` (cheap now that the harness exists — just change `lib_deps`).
 4. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms) — more advertising events means more chances for a connection request to land, which may cut both the abort rate and the connect latency. Probably the best lead for the residual ~20%.
@@ -222,6 +236,11 @@ The blocker is narrower and was not on the original list: **BLE connection estab
 
 It is an upstream/platform problem, not a bug in this firmware: it reproduces in a 90-line NimBLE sketch with no WiFi, survives a platform major-version bump, and raises no event the application can see or recover from.
 
-**Recommendation: don't call go or no-go on the app yet — the remaining question is narrow and cheap to answer.** Try the advertising-interval change (next steps item 2), and if that doesn't move the numbers, try `ble_min` on an ESP32-S3. If connect becomes reliable and sub-second, the app is clearly worth building and nothing else in the spike argues against it. If it stays at 80% and multi-second across both, then BLE on this hardware can't carry a live performance tool and the honest answer is to put the effort into the web UI (phase 0) as the design doc's no-go branch says — not because of coexistence, which turned out to be a non-issue, but because of connection setup.
+**Recommendation.** The cheap software leads are now exhausted: the coexistence fix, the platform bump and the advertising interval all failed to move connection reliability off ~70-80% at multi-second latency, and it reproduces in a 90-line sketch with no WiFi. One hardware question remains and it is worth answering before deciding: **run `ble_min` on an ESP32-S3 or C3.** It is close to a drop-in for that test, and the receivers, RF24 link and mode protocol are all transport-agnostic, so even a full TX change would not touch the fleet.
+
+- If an S3 connects reliably and sub-second, the app is worth building and the TX just needs a newer chip.
+- If it behaves the same, then BLE-on-ESP32 cannot carry a live performance tool, and the honest call is the design doc's no-go branch: put the effort into the web UI (phase 0). Note that would be for a completely different reason than the design doc anticipated — connection setup, not coexistence, which this spike found to be a non-issue.
+
+Either way, don't spend more time on application-level workarounds in this firmware. The remaining uncertainty is in the silicon and the vendor stack, not here.
 
 Also raised but not decided: dropping WiFi from the TX entirely and making BLE the only transport, with Android served by Web Bluetooth from a hosted copy of the web UI (`iOS/DESIGN.md` section 6). Note the measurements above weaken the main technical argument for it — removing WiFi did *not* improve BLE, so this is now a product decision (one transport to maintain, no hotspot-joining) rather than a fix for anything. The cost stays the same: no zero-setup fallback that works on any phone. An #17 decision, not a spike outcome.

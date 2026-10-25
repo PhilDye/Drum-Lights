@@ -91,6 +91,12 @@ uint32_t spikeModesApplied = 0;
 #ifndef BLE_NAME
 #define BLE_NAME "Drum Lights TX" // override in secrets.h so neighbouring bands don't collide
 #endif
+#ifndef ADV_MIN_INTERVAL
+#define ADV_MIN_INTERVAL 32 // 20 ms, in 0.625 ms units
+#endif
+#ifndef ADV_MAX_INTERVAL
+#define ADV_MAX_INTERVAL 48 // 30 ms
+#endif
 #define BLE_SERVICE_UUID "9A9476F2-AE0D-406A-847A-D0FECAF34CE5"
 #define BLE_STATE_UUID "E1EBAF93-75C1-4681-8F5B-D07D93D86FDE"
 #define BLE_COMMAND_UUID "53F118A7-863E-429A-BF92-AC19864C8219"
@@ -270,6 +276,15 @@ void initBLE()
   NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
   advertising->setAdvertisementData(advData);
   advertising->setScanResponseData(scanData);
+
+  // #19: advertise as fast as the spec allows for a connectable peripheral.
+  // A central can only send its connection request during an advertising
+  // event, so more events per second means more chances for one to land —
+  // aimed at both the ~20% of attempts that fail and the multi-second
+  // latency. Units are 0.625 ms, and 20 ms is the floor for connectable
+  // undirected advertising. Override to compare against NimBLE's default.
+  advertising->setMinInterval(ADV_MIN_INTERVAL);
+  advertising->setMaxInterval(ADV_MAX_INTERVAL);
 
   // the real GATT registration: without this the characteristics above are
   // never handed to the NimBLE host, though advertising still runs either way

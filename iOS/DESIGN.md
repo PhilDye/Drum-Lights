@@ -4,7 +4,7 @@ Status: proposal, nothing built yet. This document covers what a native iOS cont
 
 Tracking issue and delivery plan: [PhilDye/Drum-Lights#17](https://github.com/PhilDye/Drum-Lights/issues/17).
 
-Clickable mockup of the screens below: <https://claude.ai/artifact/VGrhABAfKQD2wLGPz6Crdq> (private until shared).
+Clickable mockup of the screens below: <https://claude.ai/artifact/VGrhABAfKQD2wLGPz6Crdq> (private until shared). A source snapshot with notes on what to lift into the app lives in [`mockup/`](mockup/README.md); where its layout differs from the sketches here, the mockup is more recent.
 
 ## 1. Should this exist at all?
 

@@ -53,6 +53,11 @@ const int AUTO_MODE = -1;
 const int STROBE_MODE = 98; // one-shot; the RX revert to their previous mode
 millisDelay autoDelay; // the delay object
 
+// Mode requests from the WebSocket (and later BLE) callbacks are queued here
+// and applied on the loop task, so mode state and the radio have one owner
+const UBaseType_t MODE_QUEUE_LENGTH = 8;
+QueueHandle_t modeQueue;
+
 const int autoModes[24] = {
     1, 2, 3, 4, 5, 6, 7, 8,
     11, 12, 13, 14, 15, 16, 17, 18,
@@ -179,6 +184,7 @@ void sendMode(int mode)
 }
 
 // The single entry point for a mode requested by any controller
+// (only call from the loop task; other tasks use requestMode())
 void applyMode(int newMode)
 {
   Serial.printf("Mode #%d requested\n", newMode);
@@ -218,6 +224,21 @@ void nextAutoMode()
   sendMode(autoModes[random(24)]);
 }
 
+// Queue a mode for applyMode() on the loop task; safe to call from any task, never blocks
+void requestMode(int mode)
+{
+  // a strobe that would wait behind other requests is stale by the time it runs,
+  // so drop it and keep the queue free for real mode changes
+  if (mode == STROBE_MODE && uxQueueMessagesWaiting(modeQueue) > 0)
+  {
+    Serial.printf("Strobe dropped, requests already pending\n");
+    return;
+  }
+
+  if (xQueueSend(modeQueue, &mode, 0) != pdTRUE)
+    Serial.printf("Mode queue full, mode #%d dropped\n", mode);
+}
+
 void handleWSMessage(void *arg, uint8_t *data, size_t len)
 {
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -234,7 +255,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
-    applyMode(json["mode"].as<int>());
+    requestMode(json["mode"].as<int>());
   }
 }
 
@@ -313,6 +334,15 @@ void setup()
     // some boards need to wait to ensure access to serial over USB
   }
 
+  modeQueue = xQueueCreate(MODE_QUEUE_LENGTH, sizeof(int));
+  if (modeQueue == NULL)
+  {
+    Serial.println(F("Mode queue could not be created!!"));
+    // hold in infinite loop
+    while (1)
+      digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
+  }
+
   initRadio();
 
   if(!LittleFS.begin(true)){
@@ -334,6 +364,17 @@ void setup()
 
 void loop()
 {
+  // Wait for a mode request instead of a fixed delay, so requests are applied
+  // straight away while the loop still paces itself when idle
+  int requested;
+  if (xQueueReceive(modeQueue, &requested, pdMS_TO_TICKS(DNS_INTERVAL)) == pdTRUE)
+  {
+    do
+    {
+      applyMode(requested);
+    } while (xQueueReceive(modeQueue, &requested, 0) == pdTRUE);
+  }
+
   dnsServer.processNextRequest();
   ws.cleanupClients();
 
@@ -341,6 +382,4 @@ void loop()
   {
     nextAutoMode();
   }
-
-  delay(DNS_INTERVAL);  // seems to help with stability, if you are doing other things in the loop this may not be needed
 }

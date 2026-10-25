@@ -1,5 +1,6 @@
 import { resolve } from 'path'
 import inject from '@rollup/plugin-inject';
+import catalogue from './catalogue-plugin.js';
 
 export default {
   root: resolve(__dirname, 'src'),
@@ -19,5 +20,6 @@ export default {
     inject({
         $: 'jquery',
     }),
+    catalogue(),
   ]
 } 

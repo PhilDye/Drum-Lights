@@ -1,0 +1,30 @@
+name: Protocol sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'RX/src/main.cpp'
+      - 'TX/src/main.cpp'
+      - '.github/scripts/check_protocol.py'
+      - '.github/workflows/protocol-sync.yml'
+  pull_request:
+    paths:
+      - 'RX/src/main.cpp'
+      - 'TX/src/main.cpp'
+      - '.github/scripts/check_protocol.py'
+      - '.github/workflows/protocol-sync.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check RX/TX pipe address
+        run: python .github/scripts/check_protocol.py

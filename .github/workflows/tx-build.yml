@@ -50,7 +50,55 @@ jobs:
 
       - name: Build TX firmware
         working-directory: TX
-        run: pio run
+        shell: bash
+        run: pio run 2>&1 | tee build.log
+
+      - name: Firmware size report
+        if: always()
+        working-directory: TX
+        shell: bash
+        run: |
+          {
+            echo "### TX firmware size"
+            echo '```'
+            grep -E '^(RAM|Flash):' build.log || echo "no size info (build failed?)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  check:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-check-tx-${{ runner.os }}-${{ hashFiles('TX/platformio.ini') }}
+          restore-keys: |
+            pio-check-tx-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Create dummy secrets.h
+        run: |
+          cat > TX/src/secrets.h <<'EOF'
+          #define WIFI_SSID "ci-dummy"
+          #define WIFI_PASS "ci-dummy"
+          EOF
+
+      - name: Run cppcheck
+        working-directory: TX
+        run: pio check --skip-packages --src-filters="+<src/> +<lib/>" --flags="--suppress=*:*.pio/*" --severity=medium --severity=high --fail-on-defect=high
 
   web:
     # also checks TX/app/src/modes.json against the TX and RX firmware

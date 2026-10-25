@@ -152,7 +152,7 @@ Three things fall out of that table:
 
 Two separate results, and both matter.
 
-**The main TX firmware cannot be built on 8.0.0 at all.** 8.0.0 brings Arduino-ESP32 3.x (vs 2.x on 7.1.3), which drops `IPv6Address.h`; `AsyncTCP-esphome` still includes it, so the build fails outright. This is exactly the "ipv6 issues" that the production pin in `platformio.ini` exists to avoid — leave that pin alone. Moving the TX to a newer platform therefore needs the web stack dealt with first (migrating off the esphome forks of AsyncTCP/ESPAsyncWebServer to maintained ones that support Arduino-ESP32 3.x), which is its own piece of work and nothing to do with BLE.
+**The main TX firmware cannot be built on 8.0.0 at all.** 8.0.0 brings Arduino-ESP32 3.x (vs 2.x on 7.1.3), which drops `IPv6Address.h`; `AsyncTCP-esphome` still includes it, so the build fails outright. This is exactly the "ipv6 issues" that the production pin in `platformio.ini` exists to avoid — leave that pin alone. Moving the TX to a newer platform needs the web stack dealt with first, which is its own piece of work and nothing to do with BLE: tracked in #41. Note #19 is *not* waiting on it, since the bump does not fix the BLE bug anyway (below).
 
 **The BLE bug is still present on 8.0.0.** Since that build failure is in the web stack, `tools/spike/ble_min/` was added to test the BLE question independently: a standalone PlatformIO project with a minimal NimBLE peripheral and nothing else — no WiFi, no web server, no re-arm watchdog — using the same service UUIDs so `ble_reliability.py` works against it unchanged. It builds cleanly on both platforms.
 

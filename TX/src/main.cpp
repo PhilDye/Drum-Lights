@@ -43,6 +43,7 @@ DNSServer dnsServer;
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R', 'x', 'A', 'A', '1'};
 const byte RETRANSMITS = 5; // how many times we retransmit every message, for reliability in noisy RF environments
+const int RF_CHANNEL = 100; // RF channel (2.500 GHz) - above UK/EU WiFi channels
 
 #define LED_BUILTIN 2
 
@@ -96,6 +97,7 @@ void initRadio()
       digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
   }
 
+  radio.setChannel(RF_CHANNEL);
   radio.openWritingPipe(address);
   // Set the PA Level to try preventing power supply related problems
   radio.setPALevel(RF24_PA_MAX); // RF24_PA_MAX is default

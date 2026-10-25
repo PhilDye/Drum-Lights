@@ -50,6 +50,15 @@ It runs an AsyncWebServer serving a simple HTML/CSS/JS page from a filesystem, w
 
 The RF24 module uses a configurable transmit power with multiple channels available, but does not avoid packet collision with other sources using the same frequency. For this reason we retransmit each command multiple times in quick succession, in the hope that 'one gets through'. It also requires a stable 3.3v supply, which at high-power transmission could exceed that available from the ESP32, so a separate buck converter is used fed from the power supply.
 
+### RF Channel Configuration
+
+The RF24 modules default to channel 76 (2.476 GHz) but can be configured to use any channel from 0-125 (2.400-2.525 GHz). To avoid interference with WiFi networks, both TX and RX are configured to use channel 100 (2.500 GHz) by default, which is above the UK/EU WiFi upper limit of 2.472 GHz.
+
+**TX Configuration:** Edit the `RF_CHANNEL` constant in `TX/src/main.cpp`
+**RX Configuration:** Set `channel = 100` in the `[radio]` section of `config.ini`
+
+Both devices must use the same channel for communication.
+
 ## Receiver
 
 The receiver (RX) consists of an ESP8266-based Wemos D1-mini clone board, plus a RF24 module, mounted on a PCB.

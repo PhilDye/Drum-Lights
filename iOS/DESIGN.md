@@ -2,6 +2,8 @@
 
 Status: proposal, nothing built yet. This document covers what a native iOS controller should do, how it talks to the existing transmitter (TX), what has to change in the TX firmware, and what the web UI keeps doing for everyone without the app.
 
+Clickable mockup of the screens below: <https://claude.ai/artifact/VGrhABAfKQD2wLGPz6Crdq> (private until shared).
+
 ## 1. Should this exist at all?
 
 Be honest about the audience first. Only one or two people in a band control the lights at any time. Everyone else just wears a receiver. So the app serves a handful of operators, and it competes with a web UI that already works for any phone.
@@ -171,23 +173,27 @@ Two tabs, standard `TabView`:
 
 ```
 ┌──────────────────────────────┐
-│ ● Connected · BLE        ⚙︎   │  status pill, not a blocking modal
+│ (● Connected · Bluetooth)  ⚙︎ │  status pill, not a blocking modal
+│                  Sent to TX  │  brief confirmation after each command
+│      ( animated ring )       │  current mode, "AUTO" badge if running
+│        Blue Chase ☆          │  star adds/removes it from the palette
+│     Mode 13                  │
+│ [Solid|Chase|Twinkle|Fire|Specials]  segmented control
+│  ●  ●  ●  ●                  │
+│  ●  ●  ●  ●                  │  8 colour swatches in real colours
+│  TWO-COLOUR                  │
+│  ◐  ◐  ◐  ◐  ◐               │  bicolour swatches (hard half/half split)
 │                              │
-│      ( animated ring )       │  current mode, "Auto" badge if running
-│        Blue Chase            │
-│                              │
-│ [Solid][Chase][Twinkle][Fire]│  effect: segmented / scrolling chips
-│ [Specials]                   │
-│                              │
-│  ● ● ● ● ● ● ● ●             │  colour swatches in real colours
-│  ◐ ◐ ◐ ◐                     │  bicolour swatches (half/half)
-│                              │  unavailable combos hidden, not greyed
-│ ┌──────────────────────────┐ │
-│ │         STROBE           │ │  big, bottom, thumb reach
-│ └──────────────────────────┘ │
-│   [ Off ]          [ Auto ]  │
+│ [Off] [ STROBE        ] [Auto]│ one row, Strobe widest, thumb reach
+├──────────────────────────────┤
+│   Live            Palettes   │  tab bar
 └──────────────────────────────┘
 ```
+
+- The ring of 24 dots animates the current mode roughly as the drums show it: chase and Rio Spin/Flag and Rainbow rotate, twinkle and Rio Disco sparkle, fire flickers, Hazards and 999 blink, Off is dim. A strobe flashes every dot white.
+- Under the name: the mode number, plus "picked by Auto, changes every 30 s" while Auto runs.
+- The Specials segment replaces the swatches with tiles (Rio Spin, Rio Disco, Rio Flag, Rainbow, Hazards) and a 999 tile that needs a 0.6 s press-and-hold, with a bar filling behind the label.
+- Auto keeps running through a Strobe and stops for any other mode, 999 and Off included ([PhilDye/Drum-Lights#15](https://github.com/PhilDye/Drum-Lights/issues/15)).
 
 The web UI makes you pick a tab, then read a word ("Green"). The app turns that into two quick choices: effect, then a colour swatch. Swatches are recognisable without reading, in the dark, at a glance.
 
@@ -196,13 +202,14 @@ The web UI makes you pick a tab, then read a word ("Green"). The app turns that 
 - A Palette is a named, ordered shortlist of modes (e.g. "Fireworks night", "Carnival parade", "Favourites"). Order only sets tile position; there is no "next".
 - The tab shows palette chips across the top and the selected palette's tiles as a 2-column grid. Tap any tile to switch to that mode instantly. Reorder by drag in Edit.
 - The star next to the mode name on Live adds or removes that mode from the currently selected palette, so building a palette happens while browsing.
-- "Play full screen" turns the palette into a performance view: every tile as large as the screen allows, the active tile highlighted, Off / Strobe / Auto along the bottom. The screen stays awake (`isIdleTimerDisabled`) and a Live Activity starts.
-- Keyboards and Bluetooth pedals (which present as keyboards) map keys 1 to 9 to the first nine tiles and Space to Strobe, via `.onKeyPress`. Keep palettes to nine or fewer if you want every tile on a key.
+- Tiles carry their slot number (1 to 9) in the corner.
+- "Play full screen" turns the palette into a performance view: every tile as large as the screen allows, the active tile outlined with a glow on its colour strip, a "Now:" line with the current mode, and Off / Strobe / Auto along the bottom. The screen stays awake (`isIdleTimerDisabled`) and a Live Activity starts.
+- Keyboards and Bluetooth pedals (which present as keyboards) map keys 1 to 9 to the first nine tiles and Space to Strobe, via `.onKeyPress`. A cheap 2 to 4 button pedal covers Strobe plus the top few tiles. The Play view doesn't print this; it is a setting, not something to read mid-show.
 
 ```
 ┌──────────────────────────────┐
-│ Done   Fireworks night   ● BLE│
-│ Now: Rio Spin                │
+│ Done   Fireworks night   ● BLE│  (mockup adds watch/lock preview buttons here)
+│ Now: Rio Spin      Sent to TX│
 │ ┌────────────┐┌────────────┐ │
 │ │Blue Chase 1││Rio Spin   2│ │  active tile outlined
 │ └────────────┘└────────────┘ │
@@ -214,7 +221,11 @@ The web UI makes you pick a tab, then read a word ("Green"). The app turns that 
 └──────────────────────────────┘
 ```
 
-**Settings** (from the toolbar, not a tab): transmitter pairing, WiFi fallback credentials, haptics on/off, catalogue version, "Strobe repeat rate".
+**Settings** (sheet from the gear, not a tab):
+
+- Transmitter: name and pairing state ("Paired · Bluetooth"), WiFi fallback SSID, Forget transmitter.
+- Feedback: Haptics switch, Strobe repeat rate (default every 300 ms).
+- About: effect catalogue version and whether it matches the TX, TX firmware version.
 
 ### 5.3 Interactions that change because it's native
 
@@ -222,8 +233,8 @@ The web UI makes you pick a tab, then read a word ("Green"). The app turns that 
 | --- | --- | --- |
 | Confirming a command landed | Button turns active when TX echoes | Same visual, plus a light haptic tick when the TX acknowledges; warning haptic if it doesn't within 300 ms |
 | Strobe | Tap = one strobe | Tap = one strobe with a heavy haptic. Press-and-hold repeats at a set rate (useful for rolls). |
-| 999 | Modal dialog: "Activate?" then confirm | Press-and-hold for ~0.6 s with a filling ring and a haptic at completion. Just as safe against accidental taps, much faster, no dialog to dismiss. |
-| Disconnection | Full-screen "Disconnected" modal blocks everything | Status pill turns amber, controls dim, reconnect happens silently; a haptic when it comes back. Commands are not queued: a stale "Blue" sent 20 s late is worse than nothing. |
+| 999 | Modal dialog: "Activate?" then confirm | Press-and-hold for ~0.6 s with a bar filling behind the label and a haptic at completion. Just as safe against accidental taps, much faster, no dialog to dismiss. |
+| Disconnection | Full-screen "Disconnected" modal blocks everything | Status pill turns amber ("Reconnecting…"), controls dim and stop accepting taps, reconnect happens silently; a haptic when it comes back. Commands are not queued: a stale "Blue" sent 20 s late is worse than nothing. |
 | Auto | Button sends -1, never shows active | Auto badge on the ring, Auto button stays highlighted, shows the mode Auto picked |
 | Hands busy | Must unlock phone, find the tab | Action Button, lock screen, watch, foot pedal |
 
@@ -240,14 +251,19 @@ Surfaces that come almost free from those intents:
 
 - **Action Button** (iPhone 15 Pro and later): map to Strobe, or to one go-to palette slot. Press without looking.
 - **Control Centre controls** (iOS 18): Strobe, Off, and a few user-chosen palette slots. Reachable from the lock screen with one swipe.
-- **Live Activity** during Play: lock screen shows the palette name, the current mode, the first four palette tiles as buttons and Strobe; the Dynamic Island shows the current mode's colours.
+- **Live Activity** during Play, always showing the palette in use:
+  - Header: "DRUM LIGHTS · <palette name>" and the connection state (green Connected / amber Reconnecting…).
+  - Current mode name and its colour swatch, with a status line: "Tap a tile to switch" when the mode is one of the four tiles shown, "Tile N in this palette" when it is further down, "Not in this palette" when it was picked elsewhere, and "Auto is choosing" while Auto runs.
+  - The palette's first four tiles as buttons, active one outlined, so palette order decides what is on the lock screen; then a full-width Strobe (tap or hold).
+  - Dynamic Island: connection ring plus the current mode's colour strip, which flashes on Strobe.
+  - When the connection drops, the tiles dim and ignore taps, as in the app.
 - **Shortcuts**: lets people automate, e.g. "when I connect to the band's minibus Bluetooth, open Drum Lights".
 
 ### 5.5 Apple Watch
 
 The watch is the most interesting surface for a mestre or drummer whose hands are occupied.
 
-- Screen: the selected palette as a 2x2 tile grid (Digital Crown scrolls to more tiles), the active tile outlined, Strobe below.
+- Screen, always showing the palette in use: app name and palette name, a "Now:" line with the current mode, the palette's first four tiles as a 2x2 grid with the active one outlined (Digital Crown scrolls to the rest; the hint reads "Crown scrolls to N more tiles"), and Strobe below. Tiles dim when the connection drops.
 - Double Tap gesture (Series 9 / Ultra 2 and later, `handGestureShortcut`) bound to Strobe: pinch index finger and thumb. Test it while holding a stick before promising it works; it may not.
 - Transport: connect directly to the TX over BLE while the watch app is frontmost (lowest latency); fall back to WatchConnectivity relaying through the phone (adds roughly 100 to 500 ms, fine for switching tiles, poor for strobe timing).
 
@@ -258,7 +274,7 @@ The web UI remains the only option for Android and for anyone who just walked up
 - Render from `modes.json` (section 4), with colour swatches like the app.
 - Show real state on connect and show Auto as active (needs the firmware fixes in 3.5).
 - Replace the blocking "Disconnected" modal with a status banner.
-- Hold-to-confirm for 999 instead of a modal.
+- Hold-to-confirm for 999 (filling bar) instead of a modal.
 - Keyboard shortcuts (1 to 9, Space for Strobe), so a Bluetooth pedal or keyboard works on the web too.
 - Optional: a single palette in `localStorage` (they survive on the same phone, though the captive-portal browser may clear them; say so in the UI).
 

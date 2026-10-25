@@ -2,6 +2,8 @@
 
 Status: proposal, nothing built yet. This document covers what a native iOS controller should do, how it talks to the existing transmitter (TX), what has to change in the TX firmware, and what the web UI keeps doing for everyone without the app.
 
+Tracking issue and delivery plan: [PhilDye/Drum-Lights#17](https://github.com/PhilDye/Drum-Lights/issues/17).
+
 Clickable mockup of the screens below: <https://claude.ai/artifact/VGrhABAfKQD2wLGPz6Crdq> (private until shared).
 
 ## 1. Should this exist at all?

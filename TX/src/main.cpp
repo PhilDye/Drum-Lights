@@ -25,6 +25,7 @@
 
 #ifdef BLE_SPIKE
 #include <NimBLEDevice.h>
+#include <esp_coexist.h>
 #endif
 
 // Setup the network
@@ -234,6 +235,13 @@ class SpikeCommandCallbacks : public NimBLECharacteristicCallbacks
 void initBLE()
 {
   NimBLEDevice::init(BLE_NAME);
+
+  // #19: BLE connection *establishment* was unreliable with the WiFi AP running
+  // (connected first try with WiFi compiled out, mostly failed to reach the
+  // host at all with it on) — try biasing the radio's shared airtime toward
+  // BT to see if that's airtime starvation rather than something deeper
+  esp_err_t coexRc = esp_coex_preference_set(ESP_COEX_PREFER_BT);
+  Serial.printf("esp_coex_preference_set(PREFER_BT) rc=%d\n", coexRc);
 
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(new SpikeServerCallbacks());

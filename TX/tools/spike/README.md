@@ -114,7 +114,11 @@ This dominated the session, so it's worth recording in detail. Across many conne
 - **With the WiFi AP running** (`spike-ble`, the real build): BLE connection attempts mostly never reached the TX at all — `bleConn` stayed 0 on the device's own telemetry, meaning the attempt failed before the link layer ever completed, regardless of client app, phone, or whether a WS client was also connected. Out of many attempts across the session, only two connected successfully.
 - Once a BLE connection *did* establish with WiFi running, it was solid — see the 30-minute soak below, which ran the entire time with WiFi active and had zero issues after the initial connect.
 
-So the problem is specifically **establishing** a BLE connection while the WiFi AP is active, not holding one. This is risk 1 from `iOS/DESIGN.md` section 7, and the evidence points toward a real coexistence issue rather than a one-off firmware bug — nothing in the two fixes above explains an intermittent failure that disappears when WiFi is compiled out entirely. Not root-caused further this session (ran out of time); candidates for next time: WiFi AP beacon/DNS/DHCP timing starving the BLE controller's connection-setup window, or ESP-IDF's software coexistence arbitration needing explicit tuning rather than its defaults.
+So the problem is specifically **establishing** a BLE connection while the WiFi AP is active, not holding one. This is risk 1 from `iOS/DESIGN.md` section 7, and the evidence points toward a real coexistence issue rather than a one-off firmware bug — nothing in the two fixes above explains an intermittent failure that disappears when WiFi is compiled out entirely.
+
+**Ruled out:** `esp_coex_preference_set(ESP_COEX_PREFER_BT)` in `initBLE()` (`src/main.cpp`), biasing the shared radio's airtime toward BT. Call succeeds (`rc=0`), but connection attempts still never reached the TX's BLE host afterward — tried from both LightBlue and nRF Connect. Left in since it's harmless and a reasonable thing to have set regardless, but it isn't the fix.
+
+Not root-caused further this session (ran out of time); remaining candidates: WiFi AP beacon/DNS/DHCP timing starving the BLE controller's connection-setup window specifically (as opposed to general airtime share, which the ruled-out attempt targeted), or something in NimBLE's advertising/connection parameters that only bites when the radio is shared.
 
 `spike-ble-only` is ad hoc, added only for this diagnosis — delete it along with the rest of the spike if going no-go, don't carry it into phase 2.
 

@@ -1,0 +1,44 @@
+name: TX build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'TX/**'
+      - '.github/workflows/tx-build.yml'
+  pull_request:
+    paths:
+      - 'TX/**'
+      - '.github/workflows/tx-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+            TX/.pio
+          key: pio-${{ runner.os }}-${{ hashFiles('TX/platformio.ini') }}
+          restore-keys: |
+            pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build TX firmware
+        working-directory: TX
+        run: pio run

@@ -17,7 +17,7 @@ A native app is only worth building if it does things the web page cannot. On iO
 | Action Button, Control Centre, Shortcuts | No | Yes, App Intents |
 | Apple Watch control | No | Yes |
 | Stay connected when the screen locks | No (sockets suspended) | Yes, BLE background mode |
-| Saved cue lists that survive the captive-portal sheet closing | Fragile | Yes |
+| Saved palettes that survive the captive-portal sheet closing | Fragile | Yes |
 
 That list is long enough to justify the app, with one caveat: **almost all of the value depends on Bluetooth LE.** An app that only reuses the WiFi WebSocket inherits the worst parts of the web experience (joining a hotspot with no internet, iOS showing the captive sheet, sockets dying when the screen locks) and adds only haptics and nicer layout. If the BLE spike in section 7 fails, the right move is to improve the web UI and not build the app.
 
@@ -33,7 +33,7 @@ Goals:
 
 1. One-hand, eyes-mostly-up control during a performance, with confirmation by touch (haptics) rather than by looking.
 2. No WiFi switching. Phone keeps internet; the app talks to the TX directly.
-3. Run a show as a sequence of cues, advanced by a single tap, a foot pedal, the Action Button, or the watch.
+3. Let the operator build shortlists (palettes) of the patterns they actually use, then jump straight to any of them with one tap, from the phone, the lock screen, a keyboard/pedal or the watch. Performances follow the music, not a script, so this is a palette to pick from, not a playlist to step through.
 4. Stay in sync with any other controllers (web or app) at the same time.
 5. Change nothing on the receivers. Every RX on every drum keeps its current firmware.
 
@@ -160,12 +160,12 @@ Today the mode numbers live in four places: RX `switch`, TX `autoModes[]`, the w
   - iOS app.
   - Widget extension: Live Activity and Control Centre controls.
   - watchOS app.
-- State: a single `@Observable` `LightsController` owns the connection, current state and pending command. Cues stored with SwiftData.
+- State: a single `@Observable` `LightsController` owns the connection, current state and pending command. Palettes stored with SwiftData.
 - `Info.plist`: `NSBluetoothAlwaysUsageDescription`, `UIBackgroundModes = bluetooth-central`, CoreBluetooth state restoration identifier; `NSLocalNetworkUsageDescription` and the Hotspot Configuration entitlement for the WiFi fallback.
 
 ### 5.2 Screens
 
-Three tabs, standard `TabView`:
+Two tabs, standard `TabView`:
 
 **Live** (default)
 
@@ -191,16 +191,28 @@ Three tabs, standard `TabView`:
 
 The web UI makes you pick a tab, then read a word ("Green"). The app turns that into two quick choices: effect, then a colour swatch. Swatches are recognisable without reading, in the dark, at a glance.
 
-**Show** (cue lists)
+**Palettes** (shortlists)
 
-- A Show is a list of Songs; each Song is an ordered list of Cues; each Cue is a mode (or Auto/Off) plus an optional label ("break", "chamada").
-- "Perform" opens a full-screen view: current cue huge, next cue below, the whole screen is the Next button, swipe back to go back, Strobe stays at the bottom.
-- Bluetooth page-turner pedals (they present as keyboards) advance cues via `.onKeyPress` (arrow / page keys). A drummer's foot is free when their hands are not.
-- While performing, the screen stays awake (`isIdleTimerDisabled`) and a Live Activity starts.
+- A Palette is a named, ordered shortlist of modes (e.g. "Fireworks night", "Carnival parade", "Favourites"). Order only sets tile position; there is no "next".
+- The tab shows palette chips across the top and the selected palette's tiles as a 2-column grid. Tap any tile to switch to that mode instantly. Reorder by drag in Edit.
+- The star next to the mode name on Live adds or removes that mode from the currently selected palette, so building a palette happens while browsing.
+- "Play full screen" turns the palette into a performance view: every tile as large as the screen allows, the active tile highlighted, Off / Strobe / Auto along the bottom. The screen stays awake (`isIdleTimerDisabled`) and a Live Activity starts.
+- Keyboards and Bluetooth pedals (which present as keyboards) map keys 1 to 9 to the first nine tiles and Space to Strobe, via `.onKeyPress`. Keep palettes to nine or fewer if you want every tile on a key.
 
-**Favourites**
-
-- A grid of pinned modes for bands that don't plan shows. Long-press any mode on Live to pin it.
+```
+┌──────────────────────────────┐
+│ Done   Fireworks night   ● BLE│
+│ Now: Rio Spin                │
+│ ┌────────────┐┌────────────┐ │
+│ │Blue Chase 1││Rio Spin   2│ │  active tile outlined
+│ └────────────┘└────────────┘ │
+│ ┌────────────┐┌────────────┐ │
+│ │Yel/Blu Tw 3││Rainbow    4│ │
+│ └────────────┘└────────────┘ │
+│        ... up to 9 ...       │
+│ [Off]  [   STROBE   ] [Auto] │
+└──────────────────────────────┘
+```
 
 **Settings** (from the toolbar, not a tab): transmitter pairing, WiFi fallback credentials, haptics on/off, catalogue version, "Strobe repeat rate".
 
@@ -221,23 +233,23 @@ An honest limit: the app can confirm that the **TX** accepted a command. It cann
 
 Define intents once in `DrumLightsKit` and reuse them everywhere:
 
-- `SetModeIntent(effect, colour)`, `StrobeIntent`, `AutoIntent`, `OffIntent`, `NextCueIntent`, `PreviousCueIntent`.
+- `SetModeIntent(mode)`, `PaletteSlotIntent(palette, slot)`, `StrobeIntent`, `AutoIntent`, `OffIntent`.
 - They conform to `LiveActivityIntent` so they run in the app's process, which holds the BLE connection in the background.
 
 Surfaces that come almost free from those intents:
 
-- **Action Button** (iPhone 15 Pro and later): map to Strobe or Next Cue. Press without looking.
-- **Control Centre controls** (iOS 18): Strobe, Next Cue, Off. Reachable from the lock screen with one swipe.
-- **Live Activity** during Perform: lock screen and Dynamic Island show current cue/mode and offer Strobe and Next buttons.
+- **Action Button** (iPhone 15 Pro and later): map to Strobe, or to one go-to palette slot. Press without looking.
+- **Control Centre controls** (iOS 18): Strobe, Off, and a few user-chosen palette slots. Reachable from the lock screen with one swipe.
+- **Live Activity** during Play: lock screen shows the palette name, the current mode, the first four palette tiles as buttons and Strobe; the Dynamic Island shows the current mode's colours.
 - **Shortcuts**: lets people automate, e.g. "when I connect to the band's minibus Bluetooth, open Drum Lights".
 
 ### 5.5 Apple Watch
 
 The watch is the most interesting surface for a mestre or drummer whose hands are occupied.
 
-- Screen: current mode/cue, huge Next button, Strobe button. Digital Crown scrolls the cue list.
-- Double Tap gesture (Series 9 / Ultra 2 and later, `handGestureShortcut`) bound to Next Cue: pinch index finger and thumb to advance. Test it while holding a stick before promising it works; it may not.
-- Transport: connect directly to the TX over BLE while the watch app is frontmost (lowest latency); fall back to WatchConnectivity relaying through the phone (adds roughly 100 to 500 ms, fine for cues, poor for strobe timing).
+- Screen: the selected palette as a 2x2 tile grid (Digital Crown scrolls to more tiles), the active tile outlined, Strobe below.
+- Double Tap gesture (Series 9 / Ultra 2 and later, `handGestureShortcut`) bound to Strobe: pinch index finger and thumb. Test it while holding a stick before promising it works; it may not.
+- Transport: connect directly to the TX over BLE while the watch app is frontmost (lowest latency); fall back to WatchConnectivity relaying through the phone (adds roughly 100 to 500 ms, fine for switching tiles, poor for strobe timing).
 
 ## 6. Web UI: stays, and gets better
 
@@ -247,8 +259,8 @@ The web UI remains the only option for Android and for anyone who just walked up
 - Show real state on connect and show Auto as active (needs the firmware fixes in 3.5).
 - Replace the blocking "Disconnected" modal with a status banner.
 - Hold-to-confirm for 999 instead of a modal.
-- Keyboard shortcuts, so a Bluetooth page-turner pedal works on the web too.
-- Optional: simple cue lists in `localStorage` (they survive on the same phone, though the captive-portal browser may clear them; say so in the UI).
+- Keyboard shortcuts (1 to 9, Space for Strobe), so a Bluetooth pedal or keyboard works on the web too.
+- Optional: a single palette in `localStorage` (they survive on the same phone, though the captive-portal browser may clear them; say so in the UI).
 
 Forward-looking option: the BLE service also unlocks **Web Bluetooth on Android Chrome**. A copy of the web UI hosted on a normal HTTPS site (e.g. GitHub Pages) could talk to the TX over BLE, giving Android operators the "no WiFi switching" benefit without a native Android app. Safari does not support Web Bluetooth, so this does nothing for iOS.
 
@@ -266,18 +278,18 @@ Forward-looking option: the BLE service also unlocks **Web Bluetooth on Android 
 | --- | --- | --- | --- |
 | 0 | TX fixes from 3.5, `applyMode()` refactor, state on connect, `modes.json`, web UI renders from it | 1 to 2 days | Better web UI, foundation for app |
 | 1 | BLE spike (risk 1 and 2) | 1 day | Go / no-go for the app |
-| 2 | TX BLE service with passkey bonding; app Live + Favourites over BLE, WebSocket fallback; haptics | 1 to 2 weeks (hobby pace) | Usable app |
-| 3 | Show / cue lists, Perform mode, pedal support, App Intents, Action Button, Control Centre, Live Activity | 1 week | The features that justify the app |
+| 2 | TX BLE service with passkey bonding; app Live tab over BLE, WebSocket fallback; haptics | 1 to 2 weeks (hobby pace) | Usable app |
+| 3 | Palettes, Play view, keyboard/pedal support, App Intents, Action Button, Control Centre, Live Activity | 1 week | The features that justify the app |
 | 4 | Watch app | 3 to 5 days | Hands-busy control |
 
 Phase 0 is worth doing even if nothing after it happens.
 
 ## 9. Testing
 
-- `DrumLightsKit` unit tests: catalogue parsing, protocol encode/decode, cue advancing, reconnect logic against `MockTransport`.
+- `DrumLightsKit` unit tests: catalogue parsing, protocol encode/decode, palette editing, reconnect logic against `MockTransport`.
 - SwiftUI previews and the Simulator run on `MockTransport` (same idea as the web UI's dev-mode echo server).
 - BLE needs a real device and a TX on the bench; keep one spare TX and two receivers as a test rig.
-- Before each season: a rehearsal run of a full Show with the screen locked, using only the Action Button / watch / pedal.
+- Before each season: a rehearsal using a palette with the screen locked, switching only from the lock screen, Action Button, watch and pedal.
 
 ## 10. Later ideas (deliberately parked)
 

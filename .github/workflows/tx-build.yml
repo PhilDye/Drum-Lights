@@ -39,6 +39,13 @@ jobs:
       - name: Install PlatformIO
         run: pip install --upgrade platformio
 
+      - name: Create dummy secrets.h
+        run: |
+          cat > TX/src/secrets.h <<'EOF'
+          #define WIFI_SSID "ci-dummy"
+          #define WIFI_PASS "ci-dummy"
+          EOF
+
       - name: Build TX firmware
         working-directory: TX
         run: pio run

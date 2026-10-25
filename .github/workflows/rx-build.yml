@@ -1,0 +1,42 @@
+name: RX build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'RX/**'
+      - '.github/workflows/rx-build.yml'
+  pull_request:
+    paths:
+      - 'RX/**'
+      - '.github/workflows/rx-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+            RX/.pio
+          key: pio-rx-${{ runner.os }}-${{ hashFiles('RX/platformio.ini') }}
+          restore-keys: |
+            pio-rx-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build RX firmware
+        working-directory: RX
+        run: pio run

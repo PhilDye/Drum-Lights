@@ -12,6 +12,9 @@ Everything here is throwaway. If the answer is no-go, delete this folder, the tw
 | `spike-ble` | The same + NimBLE-Arduino with the GATT service below. |
 | `spike-ble-only` | `spike-ble` with `-DSPIKE_NO_WIFI`: no WiFi AP, DNS or web server at all. Ad hoc, added to isolate a connection-reliability problem (see Results). |
 | `spike-ble-debug` | `spike-ble-only` plus `CONFIG_NIMBLE_CPP_LOG_LEVEL=4` and `CORE_DEBUG_LEVEL=5`. This is what finally root-caused the advertising bug — reach for it early rather than guessing. |
+| `spike-ble-next` | `spike-ble-only` on espressif32 8.0.0. **Does not build** — kept deliberately to document why (see the platform bump section). |
+
+`tools/spike/ble_min/` is a separate standalone PlatformIO project: a minimal NimBLE peripheral with no WiFi or web server, for isolating BLE behaviour from the rest of the firmware and for testing platform/library versions. It is the cleanest reproduction of the advertising bug and the right place to try alternatives.
 
 Flash with `pio run -e spike-ble -t upload` (and `-t uploadfs` once for the web UI, as usual). CI builds the first three envs (not `spike-ble-only`) and lists their RAM and flash use in the job summary.
 
@@ -145,13 +148,33 @@ Three things fall out of that table:
 
 **Ruled out:** `esp_coex_preference_set(ESP_COEX_PREFER_BT)` in `initBLE()`. Call succeeds (`rc=0`), changes nothing. Left in as harmless. Note it was aimed at the coexistence theory that point 2 above has since undermined.
 
+### Platform bump (espressif32 8.0.0) — tried, does not fix it
+
+Two separate results, and both matter.
+
+**The main TX firmware cannot be built on 8.0.0 at all.** 8.0.0 brings Arduino-ESP32 3.x (vs 2.x on 7.1.3), which drops `IPv6Address.h`; `AsyncTCP-esphome` still includes it, so the build fails outright. This is exactly the "ipv6 issues" that the production pin in `platformio.ini` exists to avoid — leave that pin alone. Moving the TX to a newer platform therefore needs the web stack dealt with first (migrating off the esphome forks of AsyncTCP/ESPAsyncWebServer to maintained ones that support Arduino-ESP32 3.x), which is its own piece of work and nothing to do with BLE.
+
+**The BLE bug is still present on 8.0.0.** Since that build failure is in the web stack, `tools/spike/ble_min/` was added to test the BLE question independently: a standalone PlatformIO project with a minimal NimBLE peripheral and nothing else — no WiFi, no web server, no re-arm watchdog — using the same service UUIDs so `ble_reliability.py` works against it unchanged. It builds cleanly on both platforms.
+
+| Platform | `ble_min` result | Signature |
+| --- | --- | --- |
+| 7.1.3 | 2/10 | cycles 3-4 fail to connect, then 5-10 all fail at *scan* |
+| 8.0.0 | 6/10 | cycle 7 fails to connect, then 8-10 all fail at *scan* |
+
+The success counts differ only by *when* the first aborted attempt happened to land; the signature is identical, and in both cases advertising stays dead for every subsequent cycle. Median connect on 8.0.0 was 5.6 s, no better than 7.1.3. **Not fixed by the bump.**
+
+Two things learned along the way:
+
+- **`ble_min` is a clean minimal reproduction** — pure NimBLE, ~90 lines, no WiFi. That rules out our firmware's complexity entirely and makes this suitable to file upstream as-is.
+- **The bug is intermittent per abort.** One deliberate abort left advertising healthy; the reliability runs show it firing after a few cycles. So "abort kills advertising" is probabilistic, not every time — which is why early manual testing gave such confusing, inconsistent results.
+
 **Worth trying next, in order:**
 
-1. Measure from a real iPhone — the actual question, and everything else is secondary to it.
-2. Bump the espressif32 platform (currently 7.1.3) and NimBLE-Arduino (2.5.2). The controller blob ships with the platform package, which is the layer the stale-flag bug lives in, so this is the most likely source of a real fix.
-3. Search upstream specifically for the stale-`isAdvertising()` behaviour and file it if absent — it is cleanly reproducible, which makes a good report. The project-chip issue above is related but not the same bug.
-4. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms) — more advertising events means more chances for a connection request to land, which may cut both the failure rate and the connect latency.
-5. Swap the host stack as a *diagnostic*: on ESP32 the only real alternative to NimBLE is **Bluedroid** (stock ESP-IDF, behind Arduino's `BLEDevice`). Other "BLE libraries" for Arduino-ESP32 wrap one of those two, so they are not an independent test. Bluedroid costs significantly more flash and RAM — the reason the design doc chose NimBLE — and `spike-ble` is already at 86.5% flash, so it would need `huge_app.csv`. Only worth it to answer "is this NimBLE or the shared controller?": if the bug reproduces under Bluedroid too, no library swap will help.
+1. Measure from a real iPhone — the actual question, and everything else is secondary to it. `ble_min` plus the manual equivalent of one `ble_reliability.py` cycle is enough.
+2. File it upstream against NimBLE-Arduino and/or esp-idf, using `ble_min` as the reproduction: an aborted connection attempt can leave the controller not advertising while the host's `isAdvertising()` still returns true, with no GAP event raised, so `start()` no-ops and only `stop()`+`start()` recovers. Reproduced on espressif32 7.1.3 and 8.0.0, NimBLE-Arduino 2.5.2. Related but not identical: [project-chip/connectedhomeip#74202](https://github.com/project-chip/connectedhomeip/issues/74202).
+3. Try a different NimBLE-Arduino version against `ble_min` (cheap now that the harness exists — just change `lib_deps`).
+4. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms) — more advertising events means more chances for a connection request to land, which may cut both the abort rate and the connect latency. Probably the best lead for the residual ~20%.
+5. Swap the host stack as a *diagnostic*: on ESP32 the only real alternative to NimBLE is **Bluedroid** (stock ESP-IDF, behind Arduino's `BLEDevice`). Other "BLE libraries" for Arduino-ESP32 wrap one of those two, so they are not an independent test. Bluedroid costs significantly more flash and RAM — the reason the design doc chose NimBLE — and `spike-ble` is already at 86.5% flash, so it would need `huge_app.csv`. `ble_min` is the place to try it, not the main firmware. Only worth it to answer "is this NimBLE or the shared controller?": if the bug reproduces under Bluedroid too, no library swap will help.
 
 ### 2. Soak, 30 minutes — done, go (for a connection already established)
 

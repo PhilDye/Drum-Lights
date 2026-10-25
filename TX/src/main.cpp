@@ -48,6 +48,13 @@ const byte RETRANSMITS = 5; // how many times we retransmit every message, for r
 
 int CurrentMode = 0;
 
+// Reported to controllers in every state message, so an app can tell what it is talking to
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "unknown" // normally set from git by version.py
+#endif
+const int PROTOCOL_VERSION = 1;  // bump on incompatible changes to the controller messages
+const int CATALOGUE_VERSION = 1; // bump whenever modes are added, removed or renumbered
+
 const unsigned long AUTO_TIME = 30000; // in mS
 const int AUTO_MODE = -1;
 const int STROBE_MODE = 98; // one-shot; the RX revert to their previous mode
@@ -133,12 +140,17 @@ void setUpWebserver(AsyncWebServer &webServer, const IPAddress &localIP)
   webServer.begin();
 }
 
+const size_t STATE_MSG_SIZE = 128; // room for the fields below plus a long git describe
+
 size_t buildStateMessage(char *msg, size_t msgSize)
 {
-  const size_t size = JSON_OBJECT_SIZE(2);
+  const size_t size = JSON_OBJECT_SIZE(5);
   StaticJsonDocument<size> json;
   json["mode"] = CurrentMode;
   json["auto"] = autoDelay.isRunning();
+  json["proto"] = PROTOCOL_VERSION;
+  json["fw"] = FIRMWARE_VERSION;
+  json["catalogue"] = CATALOGUE_VERSION;
 
   return serializeJson(json, msg, msgSize);
 }
@@ -147,7 +159,7 @@ size_t buildStateMessage(char *msg, size_t msgSize)
 // (only WebSocket clients for now; BLE will hook in here too)
 void notifyAll()
 {
-  char msg[64];
+  char msg[STATE_MSG_SIZE];
   size_t len = buildStateMessage(msg, sizeof(msg));
   ws.textAll(msg, len);
 
@@ -156,7 +168,7 @@ void notifyAll()
 
 void sendStateToClient(AsyncWebSocketClient *client)
 {
-  char msg[64];
+  char msg[STATE_MSG_SIZE];
   size_t len = buildStateMessage(msg, sizeof(msg));
   client->text(msg, len);
 

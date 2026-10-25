@@ -572,6 +572,7 @@ void setup()
     return;
   }
 
+#ifndef SPIKE_NO_WIFI
   startAccessPoint(WIFI_SSID, WIFI_PASS, localIP, gatewayIP, subnetMask);
 
   setUpDNSServer(dnsServer, localIP);
@@ -580,6 +581,7 @@ void setup()
   webServer.begin();
 
   initWebSocket();
+#endif
 
 #ifdef BLE_SPIKE
   initBLE();
@@ -590,7 +592,11 @@ void setup()
   telemetryDelay.start(TELEMETRY_TIME);
 #endif
 
+#ifdef SPIKE_NO_WIFI
+  Serial.println("Ready; WiFi AP disabled (SPIKE_NO_WIFI), BLE only");
+#else
   Serial.println("Ready; HTTP server started on " + WiFi.softAPIP().toString());
+#endif
 }
 
 void loop()
@@ -606,8 +612,10 @@ void loop()
     } while (xQueueReceive(modeQueue, &requested, 0) == pdTRUE);
   }
 
+#ifndef SPIKE_NO_WIFI
   dnsServer.processNextRequest();
   ws.cleanupClients();
+#endif
 
   if (autoDelay.justFinished())
   {

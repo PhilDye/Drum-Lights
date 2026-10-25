@@ -10,7 +10,8 @@ Everything here is throwaway. If the answer is no-go, delete this folder, the tw
 | --- | --- |
 | `spike-baseline` | Normal firmware + heap telemetry + RF test. BLE not compiled in. |
 | `spike-ble` | The same + NimBLE-Arduino with the GATT service below. |
-| `spike-ble-only` | `spike-ble` with `-DSPIKE_NO_WIFI`: no WiFi AP, DNS or web server at all. Ad hoc, added mid-session to isolate a connection-reliability problem (see Results) — not part of the original plan, delete along with the rest of the spike. |
+| `spike-ble-only` | `spike-ble` with `-DSPIKE_NO_WIFI`: no WiFi AP, DNS or web server at all. Ad hoc, added to isolate a connection-reliability problem (see Results). |
+| `spike-ble-debug` | `spike-ble-only` plus `CONFIG_NIMBLE_CPP_LOG_LEVEL=4` and `CORE_DEBUG_LEVEL=5`. This is what finally root-caused the advertising bug — reach for it early rather than guessing. |
 
 Flash with `pio run -e spike-ble -t upload` (and `-t uploadfs` once for the web UI, as usual). CI builds the first three envs (not `spike-ble-only`) and lists their RAM and flash use in the job summary.
 
@@ -30,7 +31,7 @@ At boot: `SPIKE boot reset=<esp_reset_reason> sketch=<bytes> freesketch=<bytes> 
 
 Every 10 s: `SPIKE t=... heap=... minheap=... maxblock=... ws=... wsCmd=... wsDisc=... ble=... bleConn=... bleCmd=... applied=...`
 
-Serial commands (type in `pio device monitor`): `r` starts the RF test, `x` stops it, `t` prints telemetry now.
+Serial commands (type in `pio device monitor`): `r` starts the RF test, `x` stops it, `t` prints telemetry now. On BLE builds, `a` reports the advertising state and tries `start()`, `b` does `stop()`+`start()` — both added to diagnose the advertising bug below, and worth keeping while it is unresolved.
 
 ## 1. Heap and flash
 
@@ -73,14 +74,15 @@ Build sizes from CI (espressif32 7.1.3, NimBLE-Arduino 2.5.2, default 4 MB parti
 
 BLE costs about 254 KB of flash and 10 KB of static RAM, leaving about 178 KB in the app slot. Compiling out the central and observer roles saved only 13 KB. If phase 2 runs short of flash, switch to `board_build.partitions = huge_app.csv` (3 MB app, 896 KB filesystem, no OTA, which the TX doesn't use). `min_spiffs.csv` won't do: the built web UI is about 588 KB and that layout's filesystem is much smaller. Static RAM is not the real test: NimBLE allocates its controller and host memory at `init()`, so the heap numbers from step 1 decide it.
 
-### Two firmware bugs found and fixed on the bench
+### Three firmware bugs found and fixed on the bench
 
-Neither was caught by CI (both build clean) — only showed up flashed to real hardware:
+None were caught by CI (all build clean) — they only showed up flashed to real hardware:
 
 1. **The GATT server was never started.** `NimBLEServer::start()` (`ble_gatts_start()`) was never called, so the State/Command/Info characteristics were never registered with the NimBLE host. Advertising ran regardless, so the boot log looked fine, but nothing could discover the service. Fixed in `2dc254b`.
 2. **Advertising didn't resume after a disconnect.** `NimBLEServer::advertiseOnDisconnect` defaults to `false` in NimBLE-Arduino 2.x. After the first BLE client disconnected, the TX went permanently invisible to every scanner until the next reboot. Fixed in `6c89d6a`.
+3. **Advertising didn't resume after an *aborted connection attempt*** — a different path to the same symptom, with a different cause, and the big one. See the section below; it needed the stale-host-flag workaround, not a config flag.
 
-Both confirmed fixed by connecting, disconnecting, and rescanning afterward.
+1 and 2 confirmed fixed by connecting, disconnecting, and rescanning. 3 is worked around rather than fixed.
 
 ### 1. Heap and flash — partially done
 
@@ -94,43 +96,62 @@ Numbers gathered on the bench (`spike-ble` unless noted):
 | `spike-ble`, BLE client only (no WiFi AP, see below) | 221,144 | 219,616 | 110,580 |
 | `spike-ble`, BLE client only (WiFi AP running, no WS client) | 85,384 | 83,676 | 65,524 |
 
-Not obtained: a true simultaneous WS + BLE reading. Every attempt to hold both at once ran into the advertising bug below before a steady state was reached — this step is blocked on that, not on anything about heap itself. The WS-only `minheap`/`maxblock` numbers above vary run to run and one sample dipped to 24,212/18,420 — below the ~40 KB/~20 KB rough bar this doc set earlier — worth another look once BLE connects reliably enough to add to that figure.
+Not obtained: a true simultaneous WS + BLE reading. Every attempt to hold both at once ran into the advertising bug below before a steady state was reached. That bug now has a workaround, so **this step should be straightforward to finish next session** — connect the web UI and a BLE client, then read `t`. The WS-only `minheap`/`maxblock` numbers above vary run to run and one sample dipped to 24,212/18,420 — below the ~40 KB/~20 KB rough bar this doc set earlier — worth another look once BLE connects reliably enough to add to that figure.
 
-### The main finding: an aborted connection attempt kills advertising until reboot
+### The main finding: an aborted connection attempt kills advertising
 
-**This is the headline result of the session and the thing to pick up first next time.**
+**Root-caused, worked around, and the workaround is in `spike-ble`. Read this first next session.**
 
-A single BLE connection attempt that is *started and then abandoned mid-handshake* permanently stops the TX advertising. It becomes invisible to every scanner — phone, Mac, any app — and only a reboot (or power cycle) brings it back. No WiFi involvement needed, no successful connection needed first.
+A BLE connection attempt that a central starts and then abandons mid-handshake stops the TX advertising. Before the workaround it stayed dead until reboot, invisible to every scanner.
 
-Reproduced deliberately on `spike-ble-only` (WiFi entirely compiled out), from a Mac:
+Exactly matches a known upstream report: [project-chip/connectedhomeip#74202](https://github.com/project-chip/connectedhomeip/issues/74202) — "a central device cancels a connection while the ESP32 peripheral is still reading the remote device's version and features". That issue is in Matter's own application code (it failed to check `connect.status`), so its fix doesn't apply to us, but it documents the NimBLE behaviour: a failed setup arrives as `BLE_GAP_EVENT_CONNECT` with non-zero status, not as a disconnect.
 
-1. Scan, find `Drum Lights TX`, start connecting, abort after 3 s (`asyncio.timeout(3)` around the bleak connect).
-2. Rescan: gone. Stayed gone across 19 consecutive further scan attempts.
-3. Reboot: back immediately.
+**Our case is worse than that, and the mechanism is specific.** With `CONFIG_NIMBLE_CPP_LOG_LEVEL=4` and `CORE_DEBUG_LEVEL=5` (env `spike-ble-debug`), an aborted attempt logs **nothing at all** — no GAP event reaches the host. `NimBLEServer::handleGapEvent` logs on entry at D level and other D-level lines appear fine, so the handler genuinely never runs. That rules out both candidate paths in NimBLE-Arduino's handler (the `rc != 0` branch, which would log and restart advertising, and the `ble_gap_conn_find` early-return on line ~460 of `NimBLEServer.cpp`). The fault is below the host, in the controller or HCI transport.
 
-`tools/spike/ble_reliability.py` reproduces this as a side effect — it scores connect/disconnect cycles, and run against the current firmware it reports **0/20 success**: cycle 1 fails with a connect timeout, and cycles 2-20 then all fail at the *scan* stage because the first failure already killed advertising. That script is the fastest way to confirm whether a candidate fix works; a fix means 20/20, not 1/20.
+The decisive measurement, via a serial `a` command added for it:
 
-**What makes this hard:** the TX logs *nothing* for the aborted attempt. No connect callback, no disconnect callback, no error, `bleConn` stays 0, heap untouched. The application code has no event to react to, so it cannot detect or recover from the condition through the NimBLE API. That points below NimBLE, at the ESP32 BLE controller getting stuck in a half-open "connecting" state that it never leaves.
+| | `isAdvertising()` | `start()` result |
+| --- | --- | --- |
+| Healthy (discoverable) | `1` | "Advertising already active" |
+| Broken (invisible to all scanners) | `1` | "Advertising already active" |
 
-**This supersedes the WiFi coexistence theory** that the earlier part of the session was built around. The observations below are still accurate as *observations*, but the explanation was wrong: it was never fundamentally about WiFi. WiFi made aborted attempts much more *frequent* (consistent with radio contention causing exactly that kind of transient mid-handshake hiccup), which is why "WiFi off" looked like a clean fix and "WiFi on" looked broken. The underlying bug fires with zero WiFi running.
+**The host's advertising flag goes stale.** It keeps reporting `true` after the controller has stopped, so `start()` short-circuits as a no-op and the application cannot recover through the normal API. That is why everything tried earlier in the session failed.
 
-What was observed, before the root cause was understood:
+**Workaround (verified):** call `stop()` *first* — which clears the stale host flag — then `start()`, which then actually reaches the controller. Verified end to end: healthy → FOUND, abort → NOT VISIBLE, `stop()`+`start()` → FOUND again, no reboot.
 
-- **With WiFi compiled out** (`spike-ble-only`): BLE connected on the first attempt, every time — *until* an attempt aborted, after which nothing could connect until reboot. The early "reliable with WiFi off" conclusion came from a handful of attempts that all happened to succeed first try.
-- **With the WiFi AP running** (`spike-ble`): most attempts never reached the TX (`bleConn` stayed 0), across both nRF Connect and LightBlue, two phones' Bluetooth stacks, a phone restart, and a board power-cycle. Only two connected across the whole session. Consistent with "contention causes an abort, the abort then bricks advertising, and every subsequent attempt fails for the second reason rather than the first."
-- Once a connection *was* established, it was rock solid regardless of WiFi — see the 30-minute soak below.
+Since there is no event to trigger on, `rearmAdvertising()` in `src/main.cpp` does this blind on a timer (`ADV_REARM_TIME`, 10 s) whenever no client is connected.
 
-**Ruled out:** `esp_coex_preference_set(ESP_COEX_PREFER_BT)` in `initBLE()` (`src/main.cpp`), biasing the shared radio's airtime toward BT. Call succeeds (`rc=0`) but changes nothing. Left in as harmless; it is not a fix. Note this was tried while the coexistence theory still looked right — it was aimed at the wrong target.
+### Measured connection reliability (`ble_reliability.py`)
 
-**Untested mitigation idea:** since the application gets no event, it cannot recover on demand — but it could recover blindly. A watchdog that soft-restarts the BLE stack (`NimBLEDevice::deinit()` then re-`init()` and re-advertise) on a timer whenever no client is connected would trade a brief advertising gap every few minutes for a bounded recovery window instead of needing a power cycle. Unattractive for a gig (an operator could still hit a dead window at the wrong moment) but it would prove whether a stack-level restart clears the stuck controller state at all, which is useful to know either way.
+`tools/spike/ble_reliability.py` scores connect → subscribe → hold → disconnect cycles, scanning fresh each time. All runs below are 10 cycles from the same Mac, immediately after flashing:
 
-**Other avenues not yet tried:**
+| Build | Re-arm interval | Success | Median connect |
+| --- | --- | --- | --- |
+| `spike-ble` (before the workaround) | — | **0/20** | — |
+| `spike-ble` (WiFi AP running) | 10 s | **8/10** | 4.4 s |
+| `spike-ble-only` (WiFi compiled out) | 10 s | 6/10 | 3.9 s |
+| `spike-ble-only` | 60 s | 2/10 | 7.0 s |
+| `spike-ble-only` | 2 s | 8/10 | 4.2 s |
 
-- Verbose logging to see what the controller actually does during the aborted attempt: `-DCONFIG_NIMBLE_CPP_LOG_LEVEL=4` and `-DCORE_DEBUG_LEVEL=5`. This should have been step one and would likely have found the root cause much sooner — do this first next session.
-- Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms). More advertising events means more chances for a connection request to land cleanly, so possibly fewer aborts in the first place — mitigation, not a fix.
-- Check whether this is a known ESP-IDF / NimBLE-Arduino issue. Given how cleanly it reproduces, it may well be filed upstream already, possibly with a workaround or a fixed version. Worth searching before writing more code — this is a strong candidate for the real answer.
-- Swap the host stack, to establish whether the bug is NimBLE-specific or sits in the shared controller layer below it. On the ESP32 there are really only two host stacks: **NimBLE** (current choice) and **Bluedroid**, the stock ESP-IDF stack exposed through Arduino's `BLEDevice` API. Bluedroid costs substantially more flash and RAM — the reason the design doc picked NimBLE in the first place — and `spike-ble` is already at 86.5% flash, so it would need `huge_app.csv` to fit. Worth doing as a *diagnostic* rather than a candidate implementation: if the same abort bricks advertising under Bluedroid too, the fault is in the shared controller/radio layer and switching libraries buys nothing. Note that "other BLE libraries" for Arduino-ESP32 (e.g. ESP32-BLE-Arduino) are wrappers over one of these two, not independent stacks — so they would not be an independent test.
-- Try a newer or older NimBLE-Arduino release (currently 2.5.2) and/or a different espressif32 platform version (currently 7.1.3) — the controller blob ships with the platform package, so a platform bump changes the layer this bug most likely lives in.
+Three things fall out of that table:
+
+1. **The workaround is the difference between unusable and mostly working.** 0/20 before: cycle 1 failed to connect, and cycles 2-20 then all failed at the *scan* stage because the first failure had already killed advertising. Failures are now isolated instead of permanent.
+2. **WiFi is not the cause.** 6/10 with WiFi compiled out versus 8/10 with the AP running — no better, and the same within noise at this sample size. **This overturns the WiFi/BT coexistence explanation** that the first half of the session was built on. Those observations were real but misattributed: what actually happened was that an early failure killed advertising permanently, so everything after it failed for that reason rather than from contention. Risk 1 in `iOS/DESIGN.md` section 7 is *not* substantiated by this spike.
+3. **The re-arm interval is load-bearing, and faster is better up to a point.** 60 s is much worse (2/10, and scan failures reappear) because the TX sits in a dead window between re-arms. 2 s is no better than 10 s. An earlier worry that the watchdog might clip connection attempts in flight was tested and is wrong — the opposite is true.
+
+**What is still unexplained:** a residual ~20% connect failure rate and multi-second connect latency (median ~4 s, worst 15.8 s). BLE connect should be well under a second. This is not WiFi and not the re-arm interval, so it is either the ESP32 controller itself or the test client.
+
+**Important caveat on all of the above:** every number here was measured from one macOS CoreBluetooth client. macOS BLE is known to be temperamental, and **a Mac is not an iPhone** — so these figures do not yet answer "is BLE stable enough on iOS". Re-running `ble_reliability.py`'s cycle manually from an actual iPhone (or a small test app) is the next thing needed, and it should come before any go/no-go call.
+
+**Ruled out:** `esp_coex_preference_set(ESP_COEX_PREFER_BT)` in `initBLE()`. Call succeeds (`rc=0`), changes nothing. Left in as harmless. Note it was aimed at the coexistence theory that point 2 above has since undermined.
+
+**Worth trying next, in order:**
+
+1. Measure from a real iPhone — the actual question, and everything else is secondary to it.
+2. Bump the espressif32 platform (currently 7.1.3) and NimBLE-Arduino (2.5.2). The controller blob ships with the platform package, which is the layer the stale-flag bug lives in, so this is the most likely source of a real fix.
+3. Search upstream specifically for the stale-`isAdvertising()` behaviour and file it if absent — it is cleanly reproducible, which makes a good report. The project-chip issue above is related but not the same bug.
+4. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms) — more advertising events means more chances for a connection request to land, which may cut both the failure rate and the connect latency.
+5. Swap the host stack as a *diagnostic*: on ESP32 the only real alternative to NimBLE is **Bluedroid** (stock ESP-IDF, behind Arduino's `BLEDevice`). Other "BLE libraries" for Arduino-ESP32 wrap one of those two, so they are not an independent test. Bluedroid costs significantly more flash and RAM — the reason the design doc chose NimBLE — and `spike-ble` is already at 86.5% flash, so it would need `huge_app.csv`. Only worth it to answer "is this NimBLE or the shared controller?": if the bug reproduces under Bluedroid too, no library swap will help.
 
 ### 2. Soak, 30 minutes — done, go (for a connection already established)
 
@@ -147,10 +168,14 @@ Not yet run: `--ws` concurrently with `--ble`. `soak.py --ws` requires the test 
 
 ### 3. RF check — not yet run
 
-Blocked on the same thing: the BLE-on half of the comparison needs a BLE client connected and subscribed for the duration of the 80-second test, which is not currently reliable to set up. The BLE-off half (`spike-baseline`) could be run any time and is worth banking on its own, since it gives the baseline the comparison needs.
+Was blocked on the advertising bug (the BLE-on half needs a client connected and subscribed for the full 80 s). Now that the workaround holds a connection reliably once established, this should be runnable as written. The BLE-off half (`spike-baseline`) needs no BLE client at all and can be banked any time.
 
 Record in #19: heap and flash numbers for both builds, the soak summary line, the `rf_score.py` table, and the verdict.
 
-**Where the go/no-go actually stands:** flash and RAM fit, and a BLE link is solid once established — those parts pass. But the advertising bug above is a blocker in its own right, independent of everything the spike originally set out to measure: an operator who can't reliably connect mid-gig, and whose only recovery is power-cycling the TX, doesn't have a usable controller. It needs to be understood (and ideally fixed upstream or worked around) before a meaningful go call is possible. The useful next question isn't "do heap and RF pass" but "is this a known, fixable ESP32/NimBLE problem?"
+**Where the go/no-go actually stands.** Flash and RAM fit. A BLE link, once established, is rock solid — the 30-minute soak proves that. The advertising bug that dominated the session is root-caused and worked around, so the TX no longer needs a power cycle to recover.
 
-Also worth revisiting in light of all this (raised but not decided): dropping WiFi from the TX entirely and making BLE the only transport, with Android served by Web Bluetooth from a hosted copy of the web UI — `iOS/DESIGN.md` section 6 sketches this. It would remove the coexistence dimension completely, at the cost of the zero-setup "just join the WiFi" fallback that works on any phone today. That is an #17 architecture decision, not a spike outcome.
+What is not yet proven is the thing the app actually depends on: that an operator can reliably *get* connected. Best measured so far is 80% of attempts with a median of ~4 s, from a Mac — and a Mac is not an iPhone. That is the open question, and it is squarely a phase-1 question rather than something to defer: an 80%-and-slow connect would be irritating in rehearsal and unacceptable mid-set, however good the link is afterwards.
+
+So: **no verdict yet, and not a no-go either.** The spike's original worry (coexistence, risk 1) turned out not to be substantiated. The real risk it surfaced instead is BLE connection establishment on the ESP32, independent of WiFi. Measure that from an iPhone, try a platform bump, and the call should be clear.
+
+Also raised but not decided: dropping WiFi from the TX entirely and making BLE the only transport, with Android served by Web Bluetooth from a hosted copy of the web UI (`iOS/DESIGN.md` section 6). Note the measurements above weaken the main technical argument for it — removing WiFi did *not* improve BLE, so this is now a product decision (one transport to maintain, no hotspot-joining) rather than a fix for anything. The cost stays the same: no zero-setup fallback that works on any phone. An #17 decision, not a spike outcome.

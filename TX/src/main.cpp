@@ -478,6 +478,35 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
 #ifdef SPIKE
 const unsigned long TELEMETRY_TIME = 10000; // in mS
 millisDelay telemetryDelay;
+#endif
+
+#ifdef BLE_SPIKE
+// #19 workaround. A connection attempt the central abandons mid-handshake leaves
+// the controller not advertising while the host still thinks it is: no GAP event
+// is raised, isAdvertising() keeps returning true, and start() therefore no-ops
+// with "advertising already active". Nothing in the API reports the real state,
+// so there is nothing to detect — instead re-arm blind on a timer whenever no
+// client is connected. stop() clears the stale host flag so the following
+// start() actually reaches the controller, which does recover it (verified on
+// the bench). The cost is a sub-millisecond advertising gap every interval, and
+// a small chance of clipping a connection attempt that is in flight at exactly
+// that moment; the central retries, so that is the cheaper risk.
+const unsigned long ADV_REARM_TIME = 10000; // in mS
+millisDelay advRearmDelay;
+
+void rearmAdvertising()
+{
+  if (bleServer->getConnectedCount() > 0)
+    return; // a live connection means advertising state is moot
+
+  NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+  adv->stop();
+  if (!adv->start())
+    Serial.println("BLE advertising re-arm failed");
+}
+#endif
+
+#ifdef SPIKE
 
 // RF test: alternate strobe with the solid colours 1-8, so every step differs from the
 // last and a receiver's log shows each change it missed (score with tools/spike/rf_score.py)
@@ -512,7 +541,7 @@ void printSpikeBanner()
                 "off"
 #endif
   );
-  Serial.println("SPIKE serial commands: r = start RF test, x = stop RF test, t = telemetry now");
+  Serial.println("SPIKE serial commands: r = start RF test, x = stop RF test, t = telemetry, a = adv state, b = stop+start adv");
 }
 
 // Serial commands and periodic telemetry; called from loop()
@@ -534,6 +563,29 @@ void spikeLoop()
     case 't':
       printTelemetry();
       break;
+#ifdef BLE_SPIKE
+    // #19: after an aborted connection attempt kills advertising, does the host
+    // even know? And can the application get it back without a reboot?
+    case 'a':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      Serial.printf("BLE isAdvertising=%d connected=%u; calling start()...\n",
+                    adv->isAdvertising(), bleServer->getConnectedCount());
+      Serial.printf("BLE start() returned %d, isAdvertising now=%d\n",
+                    adv->start(), adv->isAdvertising());
+      break;
+    }
+    // the host's isAdvertising() goes stale (stays true) when the controller
+    // stops after an aborted connect, so start() no-ops with "already active";
+    // stop() first to clear the flag, so start() actually re-issues to the controller
+    case 'b':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      Serial.printf("BLE stop() returned %d, then start() returned %d, isAdvertising=%d\n",
+                    adv->stop(), adv->start(), adv->isAdvertising());
+      break;
+    }
+#endif
     }
   }
 
@@ -551,6 +603,14 @@ void spikeLoop()
     telemetryDelay.repeat();
     printTelemetry();
   }
+
+#ifdef BLE_SPIKE
+  if (advRearmDelay.justFinished())
+  {
+    advRearmDelay.repeat();
+    rearmAdvertising();
+  }
+#endif
 }
 #endif
 
@@ -598,6 +658,10 @@ void setup()
 #ifdef SPIKE
   printSpikeBanner();
   telemetryDelay.start(TELEMETRY_TIME);
+#endif
+
+#ifdef BLE_SPIKE
+  advRearmDelay.start(ADV_REARM_TIME);
 #endif
 
 #ifdef SPIKE_NO_WIFI

@@ -62,4 +62,14 @@ The test alternates strobe 98 with solid colours 1 to 8 every 400 ms for 200 ste
 
 ## Results
 
+Build sizes from CI (espressif32 7.1.3, NimBLE-Arduino 2.5.2, default 4 MB partition table with a 1,310,720-byte app slot):
+
+| Env | Flash | Static RAM |
+| --- | --- | --- |
+| `az-delivery-devkit-v4` | 876,021 (66.8%) | 45,888 |
+| `spike-baseline` | 878,417 (67.0%) | 45,936 |
+| `spike-ble` | 1,132,453 (86.4%) | 55,672 |
+
+BLE costs about 254 KB of flash and 10 KB of static RAM, leaving about 178 KB in the app slot. Compiling out the central and observer roles saved only 13 KB. If phase 2 runs short of flash, switch to `board_build.partitions = huge_app.csv` (3 MB app, 896 KB filesystem, no OTA, which the TX doesn't use). `min_spiffs.csv` won't do: the built web UI is about 588 KB and that layout's filesystem is much smaller. Static RAM is not the real test: NimBLE allocates its controller and host memory at `init()`, so the heap numbers from step 1 decide it.
+
 Record in #19: heap and flash numbers for both builds, the soak summary line, the `rf_score.py` table, and the verdict.

@@ -261,9 +261,14 @@ void initBLE()
   NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
   advertising->setAdvertisementData(advData);
   advertising->setScanResponseData(scanData);
-  advertising->start();
 
-  Serial.println("BLE advertising as " BLE_NAME);
+  // the real GATT registration: without this the characteristics above are
+  // never handed to the NimBLE host, though advertising still runs either way
+  bool serverStarted = bleServer->start();
+  bool advertisingStarted = advertising->start();
+
+  Serial.printf("BLE server start=%d advertising start=%d, advertising as %s\n",
+                serverStarted, advertisingStarted, BLE_NAME);
 }
 #endif
 

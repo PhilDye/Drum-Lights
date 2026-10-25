@@ -58,9 +58,13 @@ function onMessage(event) {
         // find the tab that contains the new mode
         var labelledBy = newButton.parents('div.tab-pane').attr('aria-labelledby');
         $('#' + labelledBy).trigger("click");
-        
+
         $(newButton).addClass('active');
-    
+
+    }
+
+    if (msg.auto) {
+        document.getElementById('btnAuto').classList.add('active');
     }
 }
 

@@ -127,17 +127,32 @@ void setUpWebserver(AsyncWebServer &webServer, const IPAddress &localIP)
   webServer.begin();
 }
 
-void notifyClients()
+size_t buildStateMessage(char *msg, size_t msgSize)
 {
-  const size_t size = JSON_OBJECT_SIZE(1);
+  const size_t size = JSON_OBJECT_SIZE(2);
   StaticJsonDocument<size> json;
   json["mode"] = CurrentMode;
+  json["auto"] = autoDelay.isRunning();
 
-  char msg[32];
-  size_t len = serializeJson(json, msg);
+  return serializeJson(json, msg, msgSize);
+}
+
+void notifyClients()
+{
+  char msg[64];
+  size_t len = buildStateMessage(msg, sizeof(msg));
   ws.textAll(msg, len);
 
-  Serial.printf("CurrentMode #%d broadcasted to WS\n", CurrentMode);
+  Serial.printf("State broadcasted to WS: %s\n", msg);
+}
+
+void sendStateToClient(AsyncWebSocketClient *client)
+{
+  char msg[64];
+  size_t len = buildStateMessage(msg, sizeof(msg));
+  client->text(msg, len);
+
+  Serial.printf("State sent to WS client #%u: %s\n", client->id(), msg);
 }
 
 void broadcastRF()
@@ -181,7 +196,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       Serial.printf("CurrentMode randomised to #%d\n", newMode);
       autoDelay.start(AUTO_TIME);
     }
-    else if (CurrentMode = AUTO_MODE)
+    else if (autoDelay.isRunning())
     {
       autoDelay.stop();
       Serial.printf("AUTO mode set OFF\n");
@@ -214,6 +229,7 @@ void onWSEvent(AsyncWebSocket *server,
   {
   case WS_EVT_CONNECT:
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+    sendStateToClient(client);
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());

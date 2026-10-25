@@ -79,7 +79,7 @@ Service `9A9476F2-AE0D-406A-847A-D0FECAF34CE5`:
 | --- | --- | --- | --- |
 | State | `E1EBAF93-75C1-4681-8F5B-D07D93D86FDE` | read, notify | `int32 mode` (LE) + `uint8 flags` (bit 0 = auto running) |
 | Command | `53F118A7-863E-429A-BF92-AC19864C8219` | write (encrypted) | `int32 mode` (LE), same numbers as the WebSocket, `-1` = auto |
-| Info | `B1AB44F5-A9A1-4152-852B-50A7D7EC8427` | read | small UTF-8 JSON, e.g. `{"proto":1,"fw":"1.4.0","catalogue":3}` |
+| Info | `B1AB44F5-A9A1-4152-852B-50A7D7EC8427` | read | small UTF-8 JSON, e.g. `{"proto":1,"fw":"1a7a0a1","catalogue":1}` |
 
 Notes:
 
@@ -105,10 +105,14 @@ Client to TX is unchanged: `{"mode": n}`.
 TX to client gains fields that the current web UI simply ignores:
 
 ```json
-{"mode": 13, "auto": false, "proto": 1, "fw": "1.4.0", "catalogue": 3}
+{"mode": 13, "auto": false, "proto": 1, "fw": "1a7a0a1", "catalogue": 1}
 ```
 
 and the TX sends it **immediately on `WS_EVT_CONNECT`**, so a new client shows the real state instead of a blank screen.
+
+- `proto`: `PROTOCOL_VERSION` in `TX/src/main.cpp`, bumped on incompatible message changes.
+- `fw`: `git describe --tags --always --dirty` at build time, set by `TX/version.py` (`"unknown"` if git is unavailable).
+- `catalogue`: `CATALOGUE_VERSION` in `TX/src/main.cpp`, bumped whenever modes are added, removed or renumbered.
 
 ### 3.5 Existing firmware issues this design depends on fixing
 
@@ -128,7 +132,7 @@ Today the mode numbers live in four places: RX `switch`, TX `autoModes[]`, the w
 
 ```json
 {
-  "catalogue": 3,
+  "catalogue": 1,
   "colours": {
     "green":  {"name": "Green",  "rgb": "#00C853"},
     "yellow": {"name": "Yellow", "rgb": "#FFD600"},

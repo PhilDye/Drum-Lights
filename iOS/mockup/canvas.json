@@ -1,0 +1,56 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "LockScreen.dc.html": {
+      "h": 844,
+      "radius": 44,
+      "title": "Lock screen: Live Activity",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 44,
+      "title": "iPhone app (clickable)",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Watch.dc.html": {
+      "h": 366,
+      "radius": 64,
+      "title": "Apple Watch",
+      "w": 300,
+      "x": 940,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-25T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "title": {
+      "kind": "title1",
+      "maxW": 1240,
+      "text": "Drum Lights iOS: clickable mockup",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "LockScreen.dc.html",
+    "Watch.dc.html"
+  ],
+  "pages": [],
+  "title": "Drum Lights iOS Mockup"
+}

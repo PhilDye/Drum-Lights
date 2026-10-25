@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Drum Lights app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#000}
+a{color:#0A84FF}a:hover{color:#64D2FF}
+button{font-family:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;margin:0}
+.ring{position:relative;width:170px;height:170px}
+.dot{position:absolute;width:12px;height:12px;border-radius:50%}
+.spin{animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tw .dot{animation:tw 1.6s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.08}50%{opacity:1}}
+.fl .dot{animation:fl .45s ease-in-out infinite alternate}
+@keyframes fl{from{opacity:.35}to{opacity:1}}
+.bl .dot{animation:bl .5s steps(1) infinite}
+@keyframes bl{0%{opacity:1}50%{opacity:.06}}
+.flash .dot{background:#fff !important;box-shadow:0 0 16px #fff !important;opacity:1 !important;animation:none !important}
+.flashbg{background:#fff !important}
+.noscroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #000; color: #F2F2F7; font-family: -apple-system, system-ui, 'Helvetica Neue', sans-serif">
+
+<sc-if value="{{isLive}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; inset: 0; padding: 50px 16px 95px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px">
+    <button onClick="{{toggleConn}}" aria-label="Connection status, tap to simulate a dropout" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 17px; border: none; background: #1C1C1E; font-size: 14px; font-weight: 600">
+      <span style="width: 9px; height: 9px; border-radius: 50%; background: {{connColour}}"></span>
+      <span>{{connText}}</span>
+    </button>
+    <button onClick="{{openSettings}}" aria-label="Settings" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #1C1C1E; display: flex; align-items: center; justify-content: center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2F2F7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+    </button>
+  </div>
+
+  <div style="opacity: {{dimO}}; pointer-events: {{dimPE}}; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; transition: opacity .2s">
+    <div style="display: grid; flex-direction: column; align-items: center; gap: 8px; position: relative; grid-template-columns: 110px 1fr; justify-items: start; column-gap: 16px; row-gap: 2px">
+      <div class="{{ringClass}}" style="transform-origin: 50% 50%; margin-right: 0; margin-bottom: 0; grid-column: 1; grid-row: 1 / span 2; zoom: 0.65">
+        <sc-for list="{{dots}}" as="d" hint-placeholder-count="24">
+          <span class="dot" style="left: {{d.x}}px; top: {{d.y}}px; background: {{d.c}}; opacity: {{d.o}}; box-shadow: 0 0 10px {{d.c}}; animation-delay: {{d.delay}}ms"></span>
+        </sc-for>
+      </div>
+      <sc-if value="{{auto}}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; top: 0; left: 0; transform: none; padding: 4px 10px; border-radius: 10px; background: #0A84FF; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .5px">AUTO</div>
+      </sc-if>
+      <div style="display: flex; align-items: center; gap: 8px; grid-column: 2; grid-row: 1 / span 2; align-self: center">
+        <div style="font-size: 22px; font-weight: 700">{{modeName}}</div>
+        <sc-if value="{{canPin}}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{togglePin}}" aria-label="{{pinLabel}}" style="width: 32px; height: 32px; border: none; background: none; padding: 0; display: flex; align-items: center; justify-content: center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="{{starFill}}" stroke="#FFD60A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"></path></svg>
+          </button>
+        </sc-if>
+      </div>
+      
+      <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; top: 0; right: 0; padding: 5px 10px; border-radius: 12px; background: #1C1C1E; color: #30D158; font-size: 12px; font-weight: 600">Sent to TX</div>
+      </sc-if>
+    </div>
+
+    <div class="noscroll" role="tablist" aria-label="Effect" style="display: flex; gap: 6px; background: #1C1C1E; padding: 3px; border-radius: 10px">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+        <button role="tab" aria-selected="{{c.sel}}" onClick="{{c.pick}}" style="flex: 1 1 0; height: 44px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; background: {{c.bg}}; color: {{c.fg}}">{{c.label}}</button>
+      </sc-for>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0">
+      <sc-if value="{{showSwatches}}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 4px; flex: 1 1 0; grid-auto-rows: minmax(0, 1fr); align-items: stretch">
+          <sc-for list="{{swatches}}" as="s" hint-placeholder-count="8">
+            <button onClick="{{s.pick}}" aria-label="{{s.aria}}" style="border: none; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: center">
+              <span style="width: 60px; height: 60px; border-radius: 50%; background: {{s.bg}}; box-shadow: {{s.ring}}"></span>
+              <span style="font-size: 12px; color: #AEAEB2">{{s.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{hasBi}}" hint-placeholder-val="{{ true }}">
+        <div style="font-size: 11px; font-weight: 600; color: #AEAEB2; letter-spacing: .6px; margin-top: 2px">TWO-COLOUR</div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 4px; flex: 1 1 0; grid-auto-rows: minmax(0, 1fr); align-items: stretch">
+          <sc-for list="{{bis}}" as="s" hint-placeholder-count="5">
+            <button onClick="{{s.pick}}" aria-label="{{s.aria}}" style="border: none; background: none; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: center">
+              <span style="width: 60px; height: 60px; border-radius: 50%; background: {{s.bg}}; box-shadow: {{s.ring}}"></span>
+              <span style="font-size: 12px; color: #AEAEB2">{{s.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{isSpecial}}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; flex: 1 1 0; grid-auto-rows: minmax(52px, 1fr)">
+          <sc-for list="{{specials}}" as="t" hint-placeholder-count="5">
+            <button onClick="{{t.pick}}" style="height: auto; border-radius: 12px; border: 2px solid {{t.border}}; background: #1C1C1E; padding: 0 12px; display: flex; flex-direction: column; justify-content: center; gap: 6px; text-align: left">
+              <span style="font-size: 14px; font-weight: 600">{{t.label}}</span>
+              <span style="height: 5px; width: 100%; border-radius: 3px; background: {{t.bg}}"></span>
+            </button>
+          </sc-for>
+          <button onPointerDown="{{holdStart}}" onPointerUp="{{holdEnd}}" onPointerLeave="{{holdEnd}}" onPointerCancel="{{holdEnd}}" aria-label="999 blue strobes, press and hold to activate" style="height: auto; border-radius: 12px; border: 2px solid {{nnnBorder}}; background: #1C1C1E; padding: 0 12px; position: relative; overflow: hidden; text-align: left; touch-action: none; user-select: none">
+            <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{holdPct}}%; background: #0A84FF; opacity: .45"></span>
+            <span style="position: relative; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 14px; font-weight: 700">999</span>
+              <span style="font-size: 11px; color: #AEAEB2">Hold to activate</span>
+            </span>
+          </button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: stretch">
+      <button onClick="{{off}}" style="width: 76px; height: 68px; border-radius: 16px; border: 2px solid {{offBorder}}; background: #1C1C1E; font-size: 15px; font-weight: 600">Off</button>
+      <button onPointerDown="{{strobeStart}}" onPointerUp="{{strobeEnd}}" onPointerLeave="{{strobeEnd}}" onPointerCancel="{{strobeEnd}}" aria-label="Strobe, tap for one flash, hold to repeat" style="flex-grow: 1; height: 68px; border-radius: 16px; border: none; background: #FF9F0A; color: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; touch-action: none; user-select: none">
+        <span style="font-size: 19px; font-weight: 800; letter-spacing: 2px">STROBE</span>
+        <span style="font-size: 11px; font-weight: 600; color: #3A2400">Tap, or hold to repeat</span>
+      </button>
+      <button onClick="{{startAuto}}" style="width: 76px; height: 68px; border-radius: 16px; border: 2px solid {{autoBorder}}; background: {{autoBg}}; font-size: 15px; font-weight: 600">Auto</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPal}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; padding: 50px 16px 95px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 44px">
+    <h1 style="margin: 0; font-size: 34px; font-weight: 800">Palettes</h1>
+    <button style="height: 34px; padding: 0 14px; border-radius: 17px; border: none; background: #1C1C1E; color: #0A84FF; font-size: 15px; font-weight: 600">Edit</button>
+  </div>
+  <div class="noscroll" style="display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0">
+    <sc-for list="{{palChips}}" as="p" hint-placeholder-count="3">
+      <button onClick="{{p.pick}}" aria-pressed="{{p.sel}}" style="flex-shrink: 0; height: 36px; padding: 0 16px; border-radius: 18px; border: none; background: {{p.bg}}; color: {{p.fg}}; font-size: 15px; font-weight: 600; white-space: nowrap">{{p.label}}</button>
+    </sc-for>
+    <button aria-label="New palette" style="flex-shrink: 0; width: 36px; height: 36px; border-radius: 18px; border: none; background: #1C1C1E; color: #0A84FF; font-size: 22px; line-height: 1">+</button>
+  </div>
+  <div style="font-size: 13px; color: #AEAEB2">{{palSub}}</div>
+  <div class="noscroll" style="flex-grow: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 76px; gap: 10px; opacity: {{dimO}}; pointer-events: {{dimPE}}">
+    <sc-for list="{{palTiles}}" as="f" hint-placeholder-count="8">
+      <button onClick="{{f.pick}}" style="border-radius: 16px; border: 2px solid {{f.border}}; background: #1C1C1E; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left">
+        <span style="height: 8px; width: 100%; border-radius: 4px; background: {{f.bg}}"></span>
+        <span style="display: flex; justify-content: space-between; align-items: baseline; width: 100%">
+          <span style="font-size: 15px; font-weight: 600">{{f.label}}</span>
+          <span style="font-size: 12px; color: #AEAEB2">{{f.slot}}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+  <button onClick="{{startPlay}}" style="height: 56px; border-radius: 16px; border: none; background: #0A84FF; color: #fff; font-size: 18px; font-weight: 700; flex-shrink: 0">Play full screen</button>
+</div>
+</sc-if>
+
+<sc-if value="{{showTabs}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Tabs" style="position: absolute; left: 0; right: 0; bottom: 0; height: 83px; background: #1C1C1E; border-top: 0.5px solid #38383A; display: flex; padding-top: 6px; box-sizing: border-box">
+  <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+    <button onClick="{{t.pick}}" aria-current="{{t.current}}" style="flex: 1 1 0; height: 50px; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; color: {{t.colour}}">
+      <sc-if value="{{t.isLive}}" hint-placeholder-val="{{ true }}">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke-dasharray="2.2 2.2"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>
+      </sc-if>
+      <sc-if value="{{t.isPal}}" hint-placeholder-val="{{ false }}">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="2"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="2"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="2"></rect></svg>
+      </sc-if>
+      <span style="font-size: 10px; font-weight: 600">{{t.label}}</span>
+    </button>
+  </sc-for>
+</nav>
+</sc-if>
+
+<sc-if value="{{play}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #000; padding: 50px 16px 34px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 44px">
+    <button onClick="{{endPlay}}" style="height: 34px; padding: 0 14px; border-radius: 17px; border: none; background: #1C1C1E; color: #0A84FF; font-size: 15px; font-weight: 600">Done</button>
+    <div style="font-size: 16px; font-weight: 700">{{palName}}</div>
+    <span style="display: flex; align-items: center; gap: 4px">
+      <button onClick="{{toggleConn}}" aria-label="Connection status" style="display: flex; align-items: center; gap: 6px; height: 34px; border: none; background: none; font-size: 13px; color: #AEAEB2"><span style="width: 8px; height: 8px; border-radius: 50%; background: {{connColour}}"></span>BLE</button>
+      <button onClick="{{showWatch}}" aria-label="Show the Apple Watch view" style="width: 34px; height: 34px; border-radius: 17px; border: none; background: #1C1C1E; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F2F2F7" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"></rect><path d="M9 6l1-4h4l1 4M9 18l1 4h4l1-4"></path></svg>
+      </button>
+      <button onClick="{{lockPhone}}" aria-label="Lock phone to see the Live Activity" style="width: 34px; height: 34px; border-radius: 17px; border: none; background: #1C1C1E; display: flex; align-items: center; justify-content: center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F2F2F7" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+      </button>
+    </span>
+  </div>
+  <div style="display: flex; align-items: center; justify-content: space-between; height: 22px">
+    <span style="font-size: 15px; color: #AEAEB2">Now: <span style="color: #F2F2F7; font-weight: 600">{{modeName}}</span></span>
+    <sc-if value="{{sent}}" hint-placeholder-val="{{ false }}">
+      <span style="font-size: 12px; font-weight: 600; color: #30D158">Sent to TX</span>
+    </sc-if>
+  </div>
+  <div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 10px; opacity: {{dimO}}; pointer-events: {{dimPE}}">
+    <sc-for list="{{palTiles}}" as="f" hint-placeholder-count="8">
+      <button onClick="{{f.pick}}" style="border-radius: 18px; border: 3px solid {{f.border}}; background: {{f.playBg}}; padding: 12px 14px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; min-height: 0">
+        <span style="height: 12px; width: 100%; border-radius: 6px; background: {{f.bg}}; box-shadow: {{f.glow}}"></span>
+        <span style="display: flex; justify-content: space-between; align-items: baseline; width: 100%">
+          <span style="font-size: 19px; font-weight: 700">{{f.label}}</span>
+          <span style="font-size: 13px; color: #AEAEB2">{{f.slot}}</span>
+        </span>
+      </button>
+    </sc-for>
+  </div>
+  <div style="display: flex; gap: 10px">
+    <button onClick="{{off}}" style="width: 76px; height: 64px; border-radius: 16px; border: 2px solid {{offBorder}}; background: #1C1C1E; font-size: 15px; font-weight: 600">Off</button>
+    <button onPointerDown="{{strobeStart}}" onPointerUp="{{strobeEnd}}" onPointerLeave="{{strobeEnd}}" onPointerCancel="{{strobeEnd}}" class="{{strobeClass}}" style="flex-grow: 1; height: 64px; border-radius: 16px; border: none; background: #FF9F0A; color: #000; font-size: 19px; font-weight: 800; letter-spacing: 2px; touch-action: none; user-select: none">STROBE</button>
+    <button onClick="{{startAuto}}" style="width: 76px; height: 64px; border-radius: 16px; border: 2px solid {{autoBorder}}; background: {{autoBg}}; font-size: 15px; font-weight: 600">Auto</button>
+  </div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{watch}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(0,0,0,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px">
+  <div style="width: 300px; height: 366px; border-radius: 64px; border: 10px solid #2C2C2E; box-sizing: border-box; background: #000; overflow: hidden; padding: 22px 16px 14px; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <span style="font-size: 14px; font-weight: 700; color: #0A84FF">Drum Lights</span>
+      <span style="font-size: 12px; color: #AEAEB2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px">{{palName}}</span>
+    </div>
+    <div style="font-size: 12px; color: #AEAEB2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Now: <span style="color: #F2F2F7; font-weight: 600">{{modeName}}</span></div>
+    <div style="flex-grow: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px; opacity: {{dimO}}; pointer-events: {{dimPE}}">
+      <sc-for list="{{lockTiles}}" as="f" hint-placeholder-count="4">
+        <button onClick="{{f.pick}}" aria-label="{{f.label}}" style="border-radius: 14px; border: 2px solid {{f.border}}; background: {{f.playBg}}; padding: 6px 8px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; min-height: 0; overflow: hidden">
+          <span style="height: 7px; width: 100%; border-radius: 4px; background: {{f.bg}}"></span>
+          <span style="font-size: 13px; font-weight: 700; line-height: 1.15">{{f.label}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <button onPointerDown="{{strobeStart}}" onPointerUp="{{strobeEnd}}" onPointerLeave="{{strobeEnd}}" onPointerCancel="{{strobeEnd}}" class="{{strobeClass}}" style="height: 42px; flex-shrink: 0; border-radius: 21px; border: none; background: #FF9F0A; color: #000; font-size: 16px; font-weight: 800; letter-spacing: 1.5px; touch-action: none; user-select: none">STROBE</button>
+  </div>
+  <div style="font-size: 13px; color: #AEAEB2">{{watchSub}}</div>
+  <button onClick="{{hideWatch}}" style="height: 40px; padding: 0 20px; border-radius: 20px; border: none; background: #1C1C1E; color: #0A84FF; font-size: 15px; font-weight: 600">Close</button>
+</div>
+</sc-if>
+
+<sc-if value="{{locked}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: #0B0B12; display: flex; flex-direction: column; align-items: center; padding: 70px 12px 30px; box-sizing: border-box">
+  <div aria-label="Dynamic Island showing the current mode" style="width: 126px; height: 37px; border-radius: 19px; background: #000; position: absolute; top: 11px; left: 132px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; box-sizing: border-box">
+    <span style="width: 14px; height: 14px; border-radius: 50%; border: 3px dotted {{connColour}}; box-sizing: border-box"></span>
+    <span class="{{strobeClass}}" style="width: 34px; height: 6px; border-radius: 3px; background: {{modeStrip}}"></span>
+  </div>
+  <div style="font-size: 20px; font-weight: 600; color: #D1D1D6">Thursday 5 November</div>
+  <div style="font-size: 96px; font-weight: 700; line-height: 1; letter-spacing: -2px; margin-top: 4px">21:14</div>
+  <div style="flex-grow: 1"></div>
+  <div style="width: 100%; border-radius: 24px; background: rgba(28,28,30,.92); padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="font-size: 13px; font-weight: 600; color: #AEAEB2">DRUM LIGHTS · {{palNameUpper}}</span>
+      <span style="font-size: 13px; color: {{connColour}}">{{connShort}}</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span class="{{strobeClass}}" style="width: 44px; height: 44px; border-radius: 50%; background: {{modeStrip}}"></span>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 22px; font-weight: 700">{{modeName}}</span>
+        <span style="font-size: 14px; color: #AEAEB2">{{lockSub}}</span>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; opacity: {{dimO}}; pointer-events: {{dimPE}}">
+      <sc-for list="{{lockTiles}}" as="f" hint-placeholder-count="4">
+        <button onClick="{{f.pick}}" aria-label="{{f.label}}" style="height: 52px; border-radius: 12px; border: 2px solid {{f.border}}; background: #2C2C2E; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 7px; text-align: left; overflow: hidden">
+          <span style="height: 6px; width: 100%; border-radius: 3px; background: {{f.bg}}"></span>
+          <span style="font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%">{{f.label}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <button onPointerDown="{{strobeStart}}" onPointerUp="{{strobeEnd}}" onPointerLeave="{{strobeEnd}}" onPointerCancel="{{strobeEnd}}" class="{{strobeClass}}" style="height: 48px; border-radius: 14px; border: none; background: #FF9F0A; color: #000; font-size: 16px; font-weight: 800; letter-spacing: 1.5px; touch-action: none; user-select: none">STROBE</button>
+  </div>
+  <button onClick="{{unlock}}" style="margin-top: 18px; height: 44px; padding: 0 24px; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #AEAEB2; font-size: 13px">
+    <span>Tap to unlock</span>
+    <span style="width: 134px; height: 5px; border-radius: 3px; background: #F2F2F7"></span>
+  </button>
+</div>
+</sc-if>
+
+<sc-if value="{{settings}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(0,0,0,.6); display: flex; flex-direction: column; justify-content: flex-end">
+  <div style="height: 600px; background: #1C1C1E; border-radius: 14px 14px 0 0; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="width: 60px"></span>
+      <span style="font-size: 17px; font-weight: 700">Settings</span>
+      <button onClick="{{closeSettings}}" style="width: 60px; height: 44px; border: none; background: none; color: #0A84FF; font-size: 17px; font-weight: 600; text-align: right">Done</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="font-size: 12px; color: #AEAEB2; letter-spacing: .4px; padding-left: 14px">TRANSMITTER</div>
+      <div style="background: #2C2C2E; border-radius: 12px; padding: 0 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px"><span style="font-size: 16px">Drum Lights TX</span><span style="font-size: 15px; color: #AEAEB2">Paired · Bluetooth</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px; border-top: 0.5px solid #48484A"><span style="font-size: 16px">WiFi fallback</span><span style="font-size: 15px; color: #AEAEB2">[YOUR SSID]</span></div>
+        <div style="display: flex; align-items: center; height: 46px; border-top: 0.5px solid #48484A"><button style="border: none; background: none; padding: 0; color: #FF453A; font-size: 16px">Forget transmitter</button></div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="font-size: 12px; color: #AEAEB2; letter-spacing: .4px; padding-left: 14px">FEEDBACK</div>
+      <div style="background: #2C2C2E; border-radius: 12px; padding: 0 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px">
+          <span style="font-size: 16px">Haptics</span>
+          <button onClick="{{toggleHaptics}}" role="switch" aria-checked="{{haptics}}" aria-label="Haptics" style="width: 51px; height: 31px; border-radius: 16px; border: none; padding: 2px; background: {{hapticsBg}}; display: flex; justify-content: {{hapticsJustify}}">
+            <span style="width: 27px; height: 27px; border-radius: 50%; background: #fff"></span>
+          </button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px; border-top: 0.5px solid #48484A"><span style="font-size: 16px">Strobe repeat rate</span><span style="font-size: 15px; color: #AEAEB2">Every 300 ms</span></div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="font-size: 12px; color: #AEAEB2; letter-spacing: .4px; padding-left: 14px">ABOUT</div>
+      <div style="background: #2C2C2E; border-radius: 12px; padding: 0 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px"><span style="font-size: 16px">Effect catalogue</span><span style="font-size: 15px; color: #AEAEB2">v3 · matches TX</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; height: 46px; border-top: 0.5px solid #48484A"><span style="font-size: 16px">TX firmware</span><span style="font-size: 15px; color: #AEAEB2">[TX VERSION]</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(...a) {
+    super(...a);
+    this.state = {
+      tab: 'live', view: 'chase', modeId: 13, auto: false, connected: true, sent: false, flash: false, holdPct: 0,
+      play: false, settings: false, haptics: true, pal: 0,
+      palettes: [
+        { name: 'Fireworks night', ids: [13, 91, 62, 99, 84, 50, 97, 0] },
+        { name: 'Carnival parade', ids: [92, 93, 91, 12, 82, 22, 99] },
+        { name: 'Favourites', ids: [13, 91, 99, 84, 50, 22] }
+      ]
+    };
+  }
+  componentWillUnmount() {
+    clearInterval(this.autoT); clearInterval(this.strobeT); clearInterval(this.holdT); clearTimeout(this.sentT);
+  }
+  cat() {
+    if (this._cat) return this._cat;
+    const C = { green: ['Green', '#30D158'], yellow: ['Yellow', '#FFD60A'], blue: ['Blue', '#0A84FF'], cyan: ['Cyan', '#64D2FF'], red: ['Red', '#FF453A'], pink: ['Pink', '#FF6EC7'], orange: ['Orange', '#FF9F0A'], white: ['White', '#F2F2F7'] };
+    const ORDER = ['green', 'yellow', 'blue', 'cyan', 'red', 'pink', 'orange', 'white'];
+    const NUM = { green: 1, yellow: 2, blue: 3, red: 4, white: 5, cyan: 6, pink: 7, orange: 8 };
+    const BI = [['green', 'red', 1], ['yellow', 'blue', 2], ['blue', 'white', 3], ['red', 'white', 4], ['orange', 'green', 8]];
+    const all = {};
+    const add = (m) => { all[m.id] = m; return m; };
+    const singles = (kind, base, fmt) => ORDER.map((k) => add({ id: base + NUM[k], kind, cols: [C[k][1]], name: fmt(C[k][0]), short: C[k][0] }));
+    const bis = (kind, base, label) => BI.map(([a, b, x]) => add({ id: base + x, kind, cols: [C[a][1], C[b][1]], name: C[a][0] + ' / ' + C[b][0] + ' ' + label, short: C[a][0].slice(0, 3) + '/' + C[b][0].slice(0, 3) }));
+    const B = '#0A84FF', G = '#30D158', Y = '#FFD60A';
+    const effects = {
+      solid: { singles: singles('solid', 0, (n) => 'Solid ' + n), bis: [] },
+      chase: { singles: singles('chase', 10, (n) => n + ' Chase'), bis: bis('chase', 20, 'Chase') },
+      twinkle: { singles: singles('twinkle', 80, (n) => n + ' Twinkle'), bis: bis('twinkle', 60, 'Twinkle') },
+      fire: { singles: [['Orange', 50, ['#FF3B30', '#FF9F0A', '#FFD60A']], ['Green', 51, ['#0B6E2E', '#30D158', '#B4F5C4']], ['Blue', 52, ['#0040DD', '#0A84FF', '#9FD0FF']], ['Red', 53, ['#8B0000', '#FF453A', '#FF9F0A']]].map(([n, id, cols]) => add({ id, kind: 'fire', cols, name: n + ' Fire', short: n })), bis: [] }
+    };
+    const specials = [
+      { id: 91, kind: 'rio-spin', cols: [B, G, Y], name: 'Rio Spin' },
+      { id: 92, kind: 'rio-disco', cols: [B, G, Y], name: 'Rio Disco' },
+      { id: 93, kind: 'rio-flag', cols: [G, Y, B], name: 'Rio Flag' },
+      { id: 99, kind: 'rainbow', cols: ['#FF453A', '#FF9F0A', '#FFD60A', '#30D158', '#0A84FF', '#BF5AF2'], name: 'Rainbow' },
+      { id: 97, kind: 'hazards', cols: ['#FF9F0A'], name: 'Hazards' }
+    ].map(add);
+    add({ id: 199, kind: '999', cols: [B], name: '999 Blue Strobes' });
+    add({ id: 0, kind: 'off', cols: ['#3A3A3C'], name: 'Off' });
+    const autoIds = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 81, 82, 83, 84, 85, 86, 87, 88];
+    this._cat = { all, effects, specials, autoIds };
+    return this._cat;
+  }
+  strip(cols) {
+    const n = cols.length;
+    return 'linear-gradient(90deg, ' + cols.map((c, i) => c + ' ' + (i / n * 100) + '% ' + ((i + 1) / n * 100) + '%').join(', ') + ')';
+  }
+  dots(m) {
+    const out = [];
+    const tail = [1, 0.5, 0.25, 0.1, 0.04, 0.04];
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2 - Math.PI / 2;
+      const x = (85 + 72 * Math.cos(a) - 6).toFixed(1);
+      const y = (85 + 72 * Math.sin(a) - 6).toFixed(1);
+      let c = m.cols[0], o = 1, delay = 0;
+      switch (m.kind) {
+        case 'chase': c = m.cols[Math.floor(i / 6) % m.cols.length]; o = tail[i % 6]; break;
+        case 'twinkle': case 'rio-disco': c = m.cols[i % m.cols.length]; delay = (i * 373) % 1600; break;
+        case 'fire': c = m.cols[i % 3]; delay = (i * 97) % 450; break;
+        case 'rio-spin': c = m.cols[Math.floor(i / 8)]; break;
+        case 'rio-flag': c = m.cols[Math.floor(i / 2) % 3]; break;
+        case 'rainbow': c = 'hsl(' + (i * 15) + ', 100%, 55%)'; break;
+        case 'hazards': if (!((i >= 3 && i <= 8) || (i >= 15 && i <= 20))) { c = '#1C1C1E'; o = 1; } break;
+        case '999': delay = i < 12 ? 0 : 250; break;
+        case 'off': o = 0.5; break;
+      }
+      out.push({ x, y, c, o, delay });
+    }
+    return out;
+  }
+  ringClass(m) {
+    const k = m.kind;
+    let cls = 'ring';
+    if (['chase', 'rio-spin', 'rio-flag', 'rainbow'].includes(k)) cls += ' spin';
+    if (['twinkle', 'rio-disco'].includes(k)) cls += ' tw';
+    if (k === 'fire') cls += ' fl';
+    if (k === 'hazards' || k === '999') cls += ' bl';
+    if (this.state.flash) cls += ' flash';
+    return cls;
+  }
+  ping() {
+    this.setState({ sent: true });
+    clearTimeout(this.sentT);
+    this.sentT = setTimeout(() => this.setState({ sent: false }), 1200);
+  }
+  stopAuto() { clearInterval(this.autoT); this.autoT = null; }
+  setMode(id) {
+    this.stopAuto();
+    this.setState({ modeId: id, auto: false });
+    this.ping();
+  }
+  pickRandom() {
+    const ids = this.cat().autoIds;
+    return ids[Math.floor(Math.random() * ids.length)];
+  }
+  startAuto() {
+    this.stopAuto();
+    this.setState({ auto: true, modeId: this.pickRandom() });
+    this.ping();
+    this.autoT = setInterval(() => this.setState({ modeId: this.pickRandom() }), 5000);
+  }
+  strobeOnce() {
+    this.setState({ flash: true });
+    setTimeout(() => this.setState({ flash: false }), 120);
+    this.ping();
+  }
+  renderVals() {
+    const s = this.state;
+    const cat = this.cat();
+    const m = cat.all[s.modeId] || cat.all[0];
+    const sel = (id) => id === s.modeId;
+    const ring = (id) => (sel(id) ? '0 0 0 3px #000, 0 0 0 5px #F2F2F7' : 'none');
+    const swatch = (x) => ({ label: x.short, aria: x.name, bg: this.strip(x.cols), ring: ring(x.id), pick: () => this.setMode(x.id) });
+    const eff = cat.effects[s.view];
+    const chipDefs = [['solid', 'Solid'], ['chase', 'Chase'], ['twinkle', 'Twinkle'], ['fire', 'Fire'], ['special', 'Specials']];
+    const chips = chipDefs.map(([id, label]) => ({ label, sel: String(id === s.view), bg: id === s.view ? '#48484A' : 'transparent', fg: id === s.view ? '#F2F2F7' : '#AEAEB2', pick: () => this.setState({ view: id }) }));
+    const specials = cat.specials.map((x) => ({ label: x.name, bg: this.strip(x.cols), border: sel(x.id) ? '#F2F2F7' : 'transparent', pick: () => this.setMode(x.id) }));
+    const pal = s.palettes[s.pal];
+    const palChips = s.palettes.map((p, i) => ({ label: p.name, sel: String(i === s.pal), bg: i === s.pal ? '#F2F2F7' : '#1C1C1E', fg: i === s.pal ? '#000' : '#F2F2F7', pick: () => this.setState({ pal: i }) }));
+    const palTiles = pal.ids.filter((id) => cat.all[id]).map((id, i) => {
+      const x = cat.all[id];
+      return {
+        label: x.name, slot: i < 9 ? String(i + 1) : '', bg: this.strip(x.cols),
+        border: sel(id) ? '#F2F2F7' : 'transparent', playBg: sel(id) ? '#2C2C2E' : '#1C1C1E',
+        glow: sel(id) ? '0 0 14px ' + x.cols[0] : 'none',
+        pick: () => this.setMode(id)
+      };
+    });
+    const tabDefs = [['live', 'Live'], ['pal', 'Palettes']];
+    const tabs = tabDefs.map(([id, label]) => ({ label, isLive: id === 'live', isPal: id === 'pal', current: id === s.tab ? 'page' : 'false', colour: id === s.tab ? '#0A84FF' : '#8E8E93', pick: () => this.setState({ tab: id }) }));
+    const inPal = pal.ids.includes(m.id);
+    return {
+      isLive: s.tab === 'live' && !s.play, isPal: s.tab === 'pal' && !s.play,
+      showTabs: !s.play,
+      connColour: s.connected ? '#30D158' : '#FF9F0A',
+      connText: s.connected ? 'Connected · Bluetooth' : 'Reconnecting…',
+      dimO: s.connected ? 1 : 0.35, dimPE: s.connected ? 'auto' : 'none',
+      toggleConn: () => this.setState({ connected: !s.connected }),
+      openSettings: () => this.setState({ settings: true }),
+      closeSettings: () => this.setState({ settings: false }),
+      settings: s.settings,
+      haptics: String(s.haptics), hapticsBg: s.haptics ? '#30D158' : '#48484A', hapticsJustify: s.haptics ? 'flex-end' : 'flex-start',
+      toggleHaptics: () => this.setState({ haptics: !s.haptics }),
+      dots: this.dots(m), ringClass: this.ringClass(m),
+      auto: s.auto, sent: s.sent,
+      modeName: m.name,
+      modeSub: 'Mode ' + m.id + (s.auto ? ' · picked by Auto, changes every 30 s' : ''),
+      canPin: m.id !== 0,
+      togglePin: () => {
+        const palettes = s.palettes.map((p, i) => (i !== s.pal ? p : { name: p.name, ids: inPal ? p.ids.filter((id) => id !== m.id) : p.ids.concat([m.id]) }));
+        this.setState({ palettes });
+      },
+      pinLabel: inPal ? 'Remove from ' + pal.name : 'Add to ' + pal.name, starFill: inPal ? '#FFD60A' : 'none',
+      chips,
+      showSwatches: s.view !== 'special', isSpecial: s.view === 'special',
+      swatches: eff ? eff.singles.map(swatch) : [],
+      hasBi: !!(eff && eff.bis.length), bis: eff ? eff.bis.map(swatch) : [],
+      specials, nnnBorder: sel(199) ? '#F2F2F7' : 'transparent', holdPct: s.holdPct,
+      holdStart: () => {
+        const t0 = Date.now();
+        clearInterval(this.holdT);
+        this.holdT = setInterval(() => {
+          const p = Math.min(100, ((Date.now() - t0) / 600) * 100);
+          this.setState({ holdPct: p });
+          if (p >= 100) { clearInterval(this.holdT); this.setState({ holdPct: 0 }); this.setMode(199); }
+        }, 30);
+      },
+      holdEnd: () => { clearInterval(this.holdT); this.setState({ holdPct: 0 }); },
+      off: () => this.setMode(0), offBorder: sel(0) ? '#F2F2F7' : 'transparent',
+      startAuto: () => this.startAuto(), autoBorder: s.auto ? '#0A84FF' : 'transparent', autoBg: s.auto ? '#0A2A4D' : '#1C1C1E',
+      strobeStart: () => { this.strobeOnce(); clearInterval(this.strobeT); this.strobeT = setInterval(() => this.strobeOnce(), 300); },
+      strobeEnd: () => { clearInterval(this.strobeT); },
+      strobeClass: s.flash ? 'flashbg' : '',
+      palChips, palTiles, palName: pal.name,
+      palSub: pal.ids.length + ' patterns · tap any tile to switch instantly. Star a mode on Live to add it here.',
+      tabs,
+      play: s.play,
+      startPlay: () => this.setState({ play: true }),
+      endPlay: () => this.setState({ play: false, locked: false, watch: false }),
+      watch: !!s.watch,
+      showWatch: () => this.setState({ watch: true }),
+      hideWatch: () => this.setState({ watch: false }),
+      watchSub: pal.ids.length > 4 ? 'Crown scrolls to ' + (pal.ids.length - 4) + ' more tiles · Double tap: Strobe' : 'Double tap: Strobe',
+      locked: !!s.locked,
+      lockPhone: () => this.setState({ locked: true }),
+      unlock: () => this.setState({ locked: false }),
+      lockTiles: palTiles.slice(0, 4),
+      palNameUpper: pal.name.toUpperCase(),
+      connShort: s.connected ? 'Connected' : 'Reconnecting…',
+      modeStrip: this.strip(m.cols),
+      lockSub: (() => {
+        const i = pal.ids.indexOf(m.id);
+        if (s.auto) return 'Auto is choosing';
+        if (i === -1) return 'Not in this palette';
+        if (i < 4) return 'Tap a tile to switch';
+        return 'Tile ' + (i + 1) + ' in this palette';
+      })()
+    };
+  }
+}
+</script>
+</body>
+</html>

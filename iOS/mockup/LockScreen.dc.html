@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lock screen Live Activity</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#000}
+a{color:#0A84FF}a:hover{color:#64D2FF}
+button{font-family:inherit;color:inherit;margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B0B12; color: #F2F2F7; font-family: -apple-system, system-ui, 'Helvetica Neue', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 70px 12px 40px; box-sizing: border-box">
+  <div style="width: 126px; height: 37px; border-radius: 19px; background: #000; position: absolute; top: 11px; left: 132px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; box-sizing: border-box" aria-label="Dynamic Island showing Drum Lights">
+    <span style="width: 14px; height: 14px; border-radius: 50%; border: 3px dotted #0A84FF; box-sizing: border-box"></span>
+    <span style="width: 34px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #0A84FF 0% 33%, #30D158 33% 66%, #FFD60A 66% 100%)"></span>
+  </div>
+  <div style="font-size: 20px; font-weight: 600; color: #D1D1D6">Thursday 5 November</div>
+  <div style="font-size: 96px; font-weight: 700; line-height: 1; letter-spacing: -2px; margin-top: 4px">21:14</div>
+
+  <div style="flex-grow: 1"></div>
+
+  <div style="width: 100%; border-radius: 24px; background: rgba(28,28,30,.92); padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #AEAEB2">
+        <span style="width: 18px; height: 18px; border-radius: 50%; border: 3px dotted #30D158; box-sizing: border-box"></span>
+        DRUM LIGHTS · FIREWORKS NIGHT
+      </span>
+      <span style="font-size: 13px; color: #30D158">Connected</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="width: 44px; height: 44px; border-radius: 50%; background: conic-gradient(#0A84FF 0 33%, #30D158 0 66%, #FFD60A 0)"></span>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 22px; font-weight: 700">Rio Spin</span>
+        <span style="font-size: 14px; color: #AEAEB2">Tap a tile to switch</span>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <button aria-label="Blue Chase" style="height: 48px; border-radius: 12px; border: 2px solid transparent; background: #2C2C2E; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px"><span style="height: 6px; border-radius: 3px; background: #0A84FF"></span><span style="font-size: 11px; font-weight: 600">Blue Chase</span></button>
+      <button aria-label="Rio Spin, active" style="height: 48px; border-radius: 12px; border: 2px solid #F2F2F7; background: #2C2C2E; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px"><span style="height: 6px; border-radius: 3px; background: linear-gradient(90deg, #0A84FF 0% 33%, #30D158 33% 66%, #FFD60A 66% 100%)"></span><span style="font-size: 11px; font-weight: 600">Rio Spin</span></button>
+      <button aria-label="Yellow and Blue Twinkle" style="height: 48px; border-radius: 12px; border: 2px solid transparent; background: #2C2C2E; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px"><span style="height: 6px; border-radius: 3px; background: linear-gradient(90deg, #FFD60A 0% 50%, #0A84FF 50% 100%)"></span><span style="font-size: 11px; font-weight: 600">Yel/Blu Tw.</span></button>
+      <button aria-label="Rainbow" style="height: 48px; border-radius: 12px; border: 2px solid transparent; background: #2C2C2E; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 8px"><span style="height: 6px; border-radius: 3px; background: linear-gradient(90deg, #FF453A 0% 20%, #FF9F0A 20% 40%, #FFD60A 40% 60%, #30D158 60% 80%, #0A84FF 80% 100%)"></span><span style="font-size: 11px; font-weight: 600">Rainbow</span></button>
+    </div>
+    <button style="height: 48px; border-radius: 14px; border: none; background: #FF9F0A; color: #000; font-size: 16px; font-weight: 800; letter-spacing: 1.5px">STROBE</button>
+  </div>
+
+  <div style="width: 100%; display: flex; justify-content: space-between; padding: 22px 34px 0; box-sizing: border-box">
+    <button aria-label="Control Centre control: Strobe" style="width: 50px; height: 50px; border-radius: 50%; border: none; background: rgba(58,58,60,.85); display: flex; align-items: center; justify-content: center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"></path></svg>
+    </button>
+    <button aria-label="Camera" style="width: 50px; height: 50px; border-radius: 50%; border: none; background: rgba(58,58,60,.85); display: flex; align-items: center; justify-content: center">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F2F2F7" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+    </button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

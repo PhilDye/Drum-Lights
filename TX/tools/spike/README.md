@@ -144,7 +144,27 @@ Three things fall out of that table:
 
 **What is still unexplained:** a residual ~20% connect failure rate and multi-second connect latency (median ~4 s, worst 15.8 s). BLE connect should be well under a second. This is not WiFi and not the re-arm interval, so it is either the ESP32 controller itself or the test client.
 
-**Important caveat on all of the above:** every number here was measured from one macOS CoreBluetooth client. macOS BLE is known to be temperamental, and **a Mac is not an iPhone** — so these figures do not yet answer "is BLE stable enough on iOS". Re-running `ble_reliability.py`'s cycle manually from an actual iPhone (or a small test app) is the next thing needed, and it should come before any go/no-go call.
+### Measured from an actual iPhone — same result, so it is the ESP32
+
+The figures above came from one macOS CoreBluetooth client, which left open the possibility that macOS was the flaky part. It isn't. Ten manual connect/disconnect cycles from an iPhone in LightBlue, against `spike-ble` (WiFi AP running, re-arm watchdog active), with the TX's serial captured throughout:
+
+| | iPhone (manual, 10 cycles) | Mac (`ble_reliability.py`, 10 cycles) |
+| --- | --- | --- |
+| Connected first try | **8/10** | 8/10 |
+| Connect latency | 4-10 s, reported as "subjectively too slow" | median 4.4 s, max 10.2 s |
+
+Essentially identical. **The connection-establishment problem is in the ESP32, not the test client.** That closes off the "maybe it's just macOS" hypothesis, which was the main reason to doubt the earlier numbers.
+
+Supporting detail from the TX log for that run:
+
+- `bleConn=8` — exactly 8 connections reached the host, matching the 8 the operator saw succeed. The 2 failures never reached the TX at all, consistent with the abort path described above.
+- **Two of the 8 "successes" ended in `reason 520`**, which is `BLE_HS_ERR_HCI_BASE` (0x200) + `BLE_ERR_CONN_SPVN_TMO` (0x08) — a *connection supervision timeout*, i.e. the link died on its own rather than being disconnected. One lasted only 3 seconds. The other 6 ended in `reason 531` (`BLE_ERR_REM_USER_CONN_TERM`), the normal operator-initiated disconnect. So established links were not uniformly clean either, which the 30-minute soak (one long-lived connection) did not surface.
+- One boot, no resets. Heap flat at 85,364 with `minheap` 83,476 throughout — memory is a non-issue.
+- Two different client addresses appear (`54:ae:...` and `58:8b:...`) for the same phone: iOS BLE address randomisation, expected, and worth remembering for phase 2 bonding.
+
+**What this means for the go/no-go.** The thing the app depends on most — an operator reliably and quickly getting connected — measures at 80% first-try and 4-10 seconds on the real target platform, with occasional spontaneous link loss. For a gig that is not good enough: waiting ~5 seconds and retrying one time in five while a set is running is exactly the failure mode the app was supposed to remove. Everything *else* passes (flash, RAM, link stability once established, no crashes), so this is a narrow but decisive blocker rather than a broad one.
+
+It is also now clearly an upstream/platform problem rather than something to fix in this firmware: reproducible in a 90-line sketch with no WiFi (`ble_min`), unchanged by a platform major bump, and invisible to the application API.
 
 **Ruled out:** `esp_coex_preference_set(ESP_COEX_PREFER_BT)` in `initBLE()`. Call succeeds (`rc=0`), changes nothing. Left in as harmless. Note it was aimed at the coexistence theory that point 2 above has since undermined.
 
@@ -170,8 +190,9 @@ Two things learned along the way:
 
 **Worth trying next, in order:**
 
-1. Measure from a real iPhone — the actual question, and everything else is secondary to it. `ble_min` plus the manual equivalent of one `ble_reliability.py` cycle is enough.
-2. File it upstream against NimBLE-Arduino and/or esp-idf, using `ble_min` as the reproduction: an aborted connection attempt can leave the controller not advertising while the host's `isAdvertising()` still returns true, with no GAP event raised, so `start()` no-ops and only `stop()`+`start()` recovers. Reproduced on espressif32 7.1.3 and 8.0.0, NimBLE-Arduino 2.5.2. Related but not identical: [project-chip/connectedhomeip#74202](https://github.com/project-chip/connectedhomeip/issues/74202).
+1. ~~Measure from a real iPhone~~ — **done, see above.** Same 80% / 4-10 s as the Mac, so the fault is the ESP32.
+2. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms, currently NimBLE's default). Now the single best remaining lead: more advertising events per second means more chances for a connection request to land cleanly, which plausibly attacks both the abort rate *and* the multi-second latency. Cheap to try against `ble_min`, and the one idea on this list that could plausibly move 80% to something usable.
+3. File it upstream against NimBLE-Arduino and/or esp-idf, using `ble_min` as the reproduction: an aborted connection attempt can leave the controller not advertising while the host's `isAdvertising()` still returns true, with no GAP event raised, so `start()` no-ops and only `stop()`+`start()` recovers. Reproduced on espressif32 7.1.3 and 8.0.0, NimBLE-Arduino 2.5.2. Related but not identical: [project-chip/connectedhomeip#74202](https://github.com/project-chip/connectedhomeip/issues/74202).
 3. Try a different NimBLE-Arduino version against `ble_min` (cheap now that the harness exists — just change `lib_deps`).
 4. Faster advertising interval (`setMinInterval`/`setMaxInterval`, ~20 ms) — more advertising events means more chances for a connection request to land, which may cut both the abort rate and the connect latency. Probably the best lead for the residual ~20%.
 5. Swap the host stack as a *diagnostic*: on ESP32 the only real alternative to NimBLE is **Bluedroid** (stock ESP-IDF, behind Arduino's `BLEDevice`). Other "BLE libraries" for Arduino-ESP32 wrap one of those two, so they are not an independent test. Bluedroid costs significantly more flash and RAM — the reason the design doc chose NimBLE — and `spike-ble` is already at 86.5% flash, so it would need `huge_app.csv`. `ble_min` is the place to try it, not the main firmware. Only worth it to answer "is this NimBLE or the shared controller?": if the bug reproduces under Bluedroid too, no library swap will help.
@@ -195,10 +216,12 @@ Was blocked on the advertising bug (the BLE-on half needs a client connected and
 
 Record in #19: heap and flash numbers for both builds, the soak summary line, the `rf_score.py` table, and the verdict.
 
-**Where the go/no-go actually stands.** Flash and RAM fit. A BLE link, once established, is rock solid — the 30-minute soak proves that. The advertising bug that dominated the session is root-caused and worked around, so the TX no longer needs a power cycle to recover.
+**Where the go/no-go stands.** Everything the spike originally set out to measure passes: flash and RAM fit with headroom, the heap is flat, there are no crashes or resets, and a BLE link once established carried 3,155 commands over 30 minutes with zero loss. Risk 1 (WiFi/BT coexistence) is **not substantiated** — removing WiFi entirely did not improve BLE.
 
-What is not yet proven is the thing the app actually depends on: that an operator can reliably *get* connected. Best measured so far is 80% of attempts with a median of ~4 s, from a Mac — and a Mac is not an iPhone. That is the open question, and it is squarely a phase-1 question rather than something to defer: an 80%-and-slow connect would be irritating in rehearsal and unacceptable mid-set, however good the link is afterwards.
+The blocker is narrower and was not on the original list: **BLE connection establishment on the ESP32.** Measured on the real target platform (iPhone), it is 80% first-try at 4-10 seconds, with occasional spontaneous link loss. That is the one thing the app most depends on, and at those numbers an operator would be waiting ~5 seconds and retrying one time in five, mid-set — the exact experience the app exists to remove.
 
-So: **no verdict yet, and not a no-go either.** The spike's original worry (coexistence, risk 1) turned out not to be substantiated. The real risk it surfaced instead is BLE connection establishment on the ESP32, independent of WiFi. Measure that from an iPhone, try a platform bump, and the call should be clear.
+It is an upstream/platform problem, not a bug in this firmware: it reproduces in a 90-line NimBLE sketch with no WiFi, survives a platform major-version bump, and raises no event the application can see or recover from.
+
+**Recommendation: don't call go or no-go on the app yet — the remaining question is narrow and cheap to answer.** Try the advertising-interval change (next steps item 2), and if that doesn't move the numbers, try `ble_min` on an ESP32-S3. If connect becomes reliable and sub-second, the app is clearly worth building and nothing else in the spike argues against it. If it stays at 80% and multi-second across both, then BLE on this hardware can't carry a live performance tool and the honest answer is to put the effort into the web UI (phase 0) as the design doc's no-go branch says — not because of coexistence, which turned out to be a non-issue, but because of connection setup.
 
 Also raised but not decided: dropping WiFi from the TX entirely and making BLE the only transport, with Android served by Web Bluetooth from a hosted copy of the web UI (`iOS/DESIGN.md` section 6). Note the measurements above weaken the main technical argument for it — removing WiFi did *not* improve BLE, so this is now a product decision (one transport to maintain, no hotspot-joining) rather than a fix for anything. The cost stays the same: no zero-setup fallback that works on any phone. An #17 decision, not a spike outcome.

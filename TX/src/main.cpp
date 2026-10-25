@@ -50,6 +50,7 @@ int CurrentMode = 0;
 
 const unsigned long AUTO_TIME = 30000; // in mS
 const int AUTO_MODE = -1;
+const int STROBE_MODE = 98; // one-shot; the RX revert to their previous mode
 millisDelay autoDelay; // the delay object
 
 const int autoModes[24] = {
@@ -137,7 +138,9 @@ size_t buildStateMessage(char *msg, size_t msgSize)
   return serializeJson(json, msg, msgSize);
 }
 
-void notifyClients()
+// Tell every connected controller the current state
+// (only WebSocket clients for now; BLE will hook in here too)
+void notifyAll()
 {
   char msg[64];
   size_t len = buildStateMessage(msg, sizeof(msg));
@@ -155,14 +158,64 @@ void sendStateToClient(AsyncWebSocketClient *client)
   Serial.printf("State sent to WS client #%u: %s\n", client->id(), msg);
 }
 
-void broadcastRF()
+void broadcastRF(int mode)
 {
   for (size_t i = 0; i < RETRANSMITS; i++)
   {
-    radio.write(&CurrentMode, sizeof(CurrentMode), true);
+    radio.write(&mode, sizeof(mode), true);
     delay(10);
   }
-  Serial.printf("CurrentMode #%d broadcasted to RF\n", CurrentMode);
+  Serial.printf("Mode #%d broadcasted to RF\n", mode);
+}
+
+// Set the mode on all receivers and tell all controllers; leaves auto alone
+void sendMode(int mode)
+{
+  CurrentMode = mode;
+  Serial.printf("CurrentMode set to #%d\n", CurrentMode);
+
+  broadcastRF(CurrentMode);
+  notifyAll();
+}
+
+// The single entry point for a mode requested by any controller
+void applyMode(int newMode)
+{
+  Serial.printf("Mode #%d requested\n", newMode);
+
+  if (newMode == AUTO_MODE)
+  {
+    autoDelay.start(AUTO_TIME);
+    Serial.printf("AUTO mode set ON\n");
+    sendMode(autoModes[random(24)]);
+    return;
+  }
+
+  if (newMode == STROBE_MODE)
+  { // one-shot: RX revert by themselves, so CurrentMode and auto are unchanged
+    broadcastRF(STROBE_MODE);
+    notifyAll();
+    return;
+  }
+
+  if (autoDelay.isRunning())
+  {
+    autoDelay.stop();
+    Serial.printf("AUTO mode set OFF\n");
+  }
+
+  sendMode(newMode);
+}
+
+// Called from loop() when the auto delay expires
+void nextAutoMode()
+{
+  // justFinished() stops the delay, so restart it before notifying,
+  // otherwise clients are told auto is off
+  autoDelay.repeat();
+  Serial.println("autoDelay restarted");
+
+  sendMode(autoModes[random(24)]);
 }
 
 void handleWSMessage(void *arg, uint8_t *data, size_t len)
@@ -181,39 +234,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
-    int previousMode = CurrentMode;
-
-    int newMode = json["mode"];
-
-    Serial.printf("Received mode #%d\n", newMode);
-
-    if (newMode == AUTO_MODE)
-    { // auto
-      Serial.printf("AUTO mode set ON\n");
-
-      // set a random mode
-      newMode = autoModes[random(24)];
-      Serial.printf("CurrentMode randomised to #%d\n", newMode);
-      autoDelay.start(AUTO_TIME);
-    }
-    else if (newMode != 98 && autoDelay.isRunning())
-    { // strobe is a one-shot, so leave auto running
-      autoDelay.stop();
-      Serial.printf("AUTO mode set OFF\n");
-    }
-
-    CurrentMode = newMode;
-    Serial.printf("CurrentMode set to #%d\n", CurrentMode);
-
-    broadcastRF();
-
-    if (newMode == 98)
-    { // revert mode for strobe (RX automatically revert so no need to TX)
-      CurrentMode = previousMode;
-      Serial.printf("CurrentMode reverted to #%d\n", previousMode);
-    }
-
-    notifyClients();
+    applyMode(json["mode"].as<int>());
   }
 }
 
@@ -318,17 +339,7 @@ void loop()
 
   if (autoDelay.justFinished())
   {
-    // justFinished() stops the delay, so restart it before notifying,
-    // otherwise clients are told auto is off
-    autoDelay.repeat();
-    Serial.println("autoDelay restarted");
-
-    // set a random mode
-    CurrentMode = autoModes[random(24)];
-    Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
-
-    broadcastRF();
-    notifyClients();
+    nextAutoMode();
   }
 
   delay(DNS_INTERVAL);  // seems to help with stability, if you are doing other things in the loop this may not be needed

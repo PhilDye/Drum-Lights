@@ -237,6 +237,7 @@ void initBLE()
 
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(new SpikeServerCallbacks());
+  bleServer->advertiseOnDisconnect(true); // defaults to false in NimBLE-Arduino 2.x
 
   NimBLEService *service = bleServer->createService(BLE_SERVICE_UUID);
 

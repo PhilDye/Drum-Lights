@@ -42,7 +42,7 @@ DNSServer dnsServer;
 #define NRF24L01_PIN_CS 5
 RF24 radio(NRF24L01_PIN_CE, NRF24L01_PIN_CS);
 const byte address[5] = {'R', 'x', 'A', 'A', '1'};
-const byte RETRANSMITS = 5; // how many times we retransmit every message, for reliability in noisy RF environments
+const unsigned long HEARTBEAT_INTERVAL = 100; // ms — TX continuously rebroadcasts CurrentMode at this cadence so receivers self-heal from lost packets and late joiners catch up
 
 #define LED_BUILTIN 2
 
@@ -51,6 +51,7 @@ int CurrentMode = 0;
 const unsigned long AUTO_TIME = 30000; // in mS
 const int AUTO_MODE = -1;
 millisDelay autoDelay; // the delay object
+millisDelay heartbeatDelay; // ticks every HEARTBEAT_INTERVAL ms to rebroadcast CurrentMode
 
 const int autoModes[24] = {
     1, 2, 3, 4, 5, 6, 7, 8,
@@ -140,14 +141,9 @@ void notifyClients()
   Serial.printf("CurrentMode #%d broadcasted to WS\n", CurrentMode);
 }
 
-void broadcastRF()
+void sendModeRF(int mode)
 {
-  for (size_t i = 0; i < RETRANSMITS; i++)
-  {
-    radio.write(&CurrentMode, sizeof(CurrentMode), true);
-    delay(10);
-  }
-  Serial.printf("CurrentMode #%d broadcasted to RF\n", CurrentMode);
+  radio.write(&mode, sizeof(mode), true);
 }
 
 void handleWSMessage(void *arg, uint8_t *data, size_t len)
@@ -155,7 +151,6 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
-
     const size_t size = JSON_OBJECT_SIZE(1);
     StaticJsonDocument<size> json;
     DeserializationError err = deserializeJson(json, data);
@@ -166,22 +161,27 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
       return;
     }
 
-    int previousMode = CurrentMode;
-
     int newMode = json["mode"];
-
     Serial.printf("Received mode #%d\n", newMode);
+
+    // Mode 98 (strobe) is a one-shot transient. Send a single packet directly
+    // and do NOT update CurrentMode — the heartbeat must keep broadcasting
+    // the actual steady-state pattern, not 98.
+    if (newMode == 98)
+    {
+      sendModeRF(98);
+      Serial.println("Strobe transient sent (CurrentMode unchanged)");
+      return;
+    }
 
     if (newMode == AUTO_MODE)
     { // auto
       Serial.printf("AUTO mode set ON\n");
-
-      // set a random mode
       newMode = autoModes[random(24)];
       Serial.printf("CurrentMode randomised to #%d\n", newMode);
       autoDelay.start(AUTO_TIME);
     }
-    else if (CurrentMode = AUTO_MODE)
+    else if (autoDelay.isRunning())
     {
       autoDelay.stop();
       Serial.printf("AUTO mode set OFF\n");
@@ -190,13 +190,10 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
     CurrentMode = newMode;
     Serial.printf("CurrentMode set to #%d\n", CurrentMode);
 
-    broadcastRF();
-
-    if (newMode == 98)
-    { // revert mode for strobe (RX automatically revert so no need to TX)
-      CurrentMode = previousMode;
-      Serial.printf("CurrentMode reverted to #%d\n", previousMode);
-    }
+    // Edge send: zero-latency UI response. Restart the heartbeat clock so
+    // the next heartbeat lands one full interval later, not piggy-backed.
+    sendModeRF(CurrentMode);
+    heartbeatDelay.restart();
 
     notifyClients();
   }
@@ -277,6 +274,7 @@ void setup()
   }
 
   initRadio();
+  heartbeatDelay.start(HEARTBEAT_INTERVAL);
 
   if(!LittleFS.begin(true)){
     Serial.println("An Error has occurred while mounting LITTLEFS");
@@ -306,11 +304,18 @@ void loop()
     CurrentMode = autoModes[random(24)];
     Serial.printf("CurrentMode randomised to #%d\n", CurrentMode);
 
-    broadcastRF();
+    sendModeRF(CurrentMode);
+    heartbeatDelay.restart();
     notifyClients();
 
     autoDelay.repeat(); // repeat
     Serial.println("autoDelay restarted");
+  }
+
+  if (heartbeatDelay.justFinished())
+  {
+    sendModeRF(CurrentMode);
+    heartbeatDelay.repeat();
   }
 
   delay(DNS_INTERVAL);  // seems to help with stability, if you are doing other things in the loop this may not be needed

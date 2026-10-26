@@ -1,4 +1,5 @@
 #include <FastLED.h>
+#include "prototypes.h"
 
 void chase(CRGB *targetArray, int numLeds, const CRGB &color0, const CRGB &color1 = CRGB::Black)
 {
@@ -42,9 +43,16 @@ void chase(CRGB *targetArray, int numLeds, const CRGB &color0, const CRGB &color
     }
   }
 
-  i++;
-  // restart once we reach the end of each segment
-  if (i == segmentSize)
-    i = 0;
-  
+  // Apply rotation direction
+  if (rotationDirection > 0) {
+    i++;
+    // restart once we reach the end of each segment
+    if (i == segmentSize)
+      i = 0;
+  } else {
+    if (i == 0)
+      i = segmentSize - 1;
+    else
+      i--;
+  }
 }

@@ -232,17 +232,37 @@ Was blocked on the advertising bug (the BLE-on half needs a client connected and
 
 Record in #19: heap and flash numbers for both builds, the soak summary line, the `rf_score.py` table, and the verdict.
 
+### Answered on an ESP32-S3 — it connects reliably and sub-second
+
+**This is the hardware question the Recommendation below asked for, and the answer is yes.** Measured 2026-10-27 with `harness/` (the TX's full WiFi AP + web + WebSocket + LittleFS + BLE load on a bare S3, RF24 simulated), same Mac as the runs above:
+
+| Build | Success | Median connect | Max |
+| --- | --- | --- | --- |
+| TX `spike-ble` (classic ESP32) | 8/10 | 4.4 s | 10.2 s |
+| S3 harness, re-arm watchdog on | **20/20** | **1.01 s** | 1.08 s |
+| S3 harness, re-arm watchdog **off** | **20/20** | **1.03 s** | 1.15 s |
+
+Forty cycles, no failures, all 40 disconnects the normal `reason 531` with no supervision timeouts. Heap headroom is also far better: 150,176 free after setup against 85,368 on the TX.
+
+The watchdog-off column matters most: on the classic ESP32, disabling the re-arm workaround drops it to 0/20 with advertising permanently dead after the first aborted connect. The S3 does not care — **it does not have the bug**, so the whole advertising-death finding above is specific to the classic ESP32's controller.
+
+Still outstanding on the S3: an iPhone run (only macOS so far, though the two agreed closely on the TX), and the RF check, which needs real TX hardware.
+
+**A separate crash surfaced, and it is ours, not the chip's.** The S3 soak ran BLE *and* a phone on the web UI at once — the combination the TX soak never managed — and panicked after ~4 minutes in `AsyncTCP`, after 213 `Too many messages queued` errors: `AsyncClient::_error()` calls `tcp_sent()` on a pcb lwIP already freed. Full detail in `harness/README.md`. **It applies to the production TX unchanged** (same libraries, same `notifyAll()`-per-mode-change), independent of BLE, and is a fix to make in our code — rate-limit or coalesce `notifyAll()` — rather than something to wait on upstream.
+
 **Where the go/no-go stands.** Everything the spike originally set out to measure passes: flash and RAM fit with headroom, the heap is flat, there are no crashes or resets, and a BLE link once established carried 3,155 commands over 30 minutes with zero loss. Risk 1 (WiFi/BT coexistence) is **not substantiated** — removing WiFi entirely did not improve BLE.
 
 The blocker is narrower and was not on the original list: **BLE connection establishment on the ESP32.** Measured on the real target platform (iPhone), it is 80% first-try at 4-10 seconds, with occasional spontaneous link loss. That is the one thing the app most depends on, and at those numbers an operator would be waiting ~5 seconds and retrying one time in five, mid-set — the exact experience the app exists to remove.
 
 It is an upstream/platform problem, not a bug in this firmware: it reproduces in a 90-line NimBLE sketch with no WiFi, survives a platform major-version bump, and raises no event the application can see or recover from.
 
-**Recommendation.** The cheap software leads are now exhausted: the coexistence fix, the platform bump and the advertising interval all failed to move connection reliability off ~70-80% at multi-second latency, and it reproduces in a 90-line sketch with no WiFi. One hardware question remains and it is worth answering before deciding: **run `ble_min` on an ESP32-S3 or C3.** It is close to a drop-in for that test, and the receivers, RF24 link and mode protocol are all transport-agnostic, so even a full TX change would not touch the fleet.
+**Recommendation (superseded by the S3 result above — kept for the reasoning).** The cheap software leads are now exhausted: the coexistence fix, the platform bump and the advertising interval all failed to move connection reliability off ~70-80% at multi-second latency, and it reproduces in a 90-line sketch with no WiFi. One hardware question remains and it is worth answering before deciding: **run `ble_min` on an ESP32-S3 or C3.** It is close to a drop-in for that test, and the receivers, RF24 link and mode protocol are all transport-agnostic, so even a full TX change would not touch the fleet.
 
 - If an S3 connects reliably and sub-second, the app is worth building and the TX just needs a newer chip.
 - If it behaves the same, then BLE-on-ESP32 cannot carry a live performance tool, and the honest call is the design doc's no-go branch: put the effort into the web UI (phase 0). Note that would be for a completely different reason than the design doc anticipated — connection setup, not coexistence, which this spike found to be a non-issue.
 
 Either way, don't spend more time on application-level workarounds in this firmware. The remaining uncertainty is in the silicon and the vendor stack, not here.
+
+**Updated recommendation after the S3 run: go, on an S3.** The first branch above is the one that happened. BLE connection establishment — the sole blocker — measures 20/20 at ~1.0 s on an S3 under the full TX load, against 8/10 at 4.4 s on the classic ESP32, and the advertising bug is absent. Before committing: confirm with an iPhone, run the RF check, and fix the `AsyncTCP` crash (which is a TX bug today regardless of what happens to #19).
 
 Also raised but not decided: dropping WiFi from the TX entirely and making BLE the only transport, with Android served by Web Bluetooth from a hosted copy of the web UI (`iOS/DESIGN.md` section 6). Note the measurements above weaken the main technical argument for it — removing WiFi did *not* improve BLE, so this is now a product decision (one transport to maintain, no hotspot-joining) rather than a fix for anything. The cost stays the same: no zero-setup fallback that works on any phone. An #17 decision, not a spike outcome.

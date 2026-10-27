@@ -25,6 +25,7 @@
 
 #ifdef BLE_SPIKE
 #include <NimBLEDevice.h>
+#include <esp_coexist.h>
 #endif
 
 // Setup the network
@@ -89,6 +90,12 @@ uint32_t spikeModesApplied = 0;
 // Throwaway GATT service from iOS/DESIGN.md section 3.2 (no passkey/bonding yet)
 #ifndef BLE_NAME
 #define BLE_NAME "Drum Lights TX" // override in secrets.h so neighbouring bands don't collide
+#endif
+#ifndef ADV_MIN_INTERVAL
+#define ADV_MIN_INTERVAL 32 // 20 ms, in 0.625 ms units
+#endif
+#ifndef ADV_MAX_INTERVAL
+#define ADV_MAX_INTERVAL 48 // 30 ms
 #endif
 #define BLE_SERVICE_UUID "9A9476F2-AE0D-406A-847A-D0FECAF34CE5"
 #define BLE_STATE_UUID "E1EBAF93-75C1-4681-8F5B-D07D93D86FDE"
@@ -235,8 +242,16 @@ void initBLE()
 {
   NimBLEDevice::init(BLE_NAME);
 
+  // #19: BLE connection *establishment* was unreliable with the WiFi AP running
+  // (connected first try with WiFi compiled out, mostly failed to reach the
+  // host at all with it on) — try biasing the radio's shared airtime toward
+  // BT to see if that's airtime starvation rather than something deeper
+  esp_err_t coexRc = esp_coex_preference_set(ESP_COEX_PREFER_BT);
+  Serial.printf("esp_coex_preference_set(PREFER_BT) rc=%d\n", coexRc);
+
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(new SpikeServerCallbacks());
+  bleServer->advertiseOnDisconnect(true); // defaults to false in NimBLE-Arduino 2.x
 
   NimBLEService *service = bleServer->createService(BLE_SERVICE_UUID);
 
@@ -261,9 +276,23 @@ void initBLE()
   NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
   advertising->setAdvertisementData(advData);
   advertising->setScanResponseData(scanData);
-  advertising->start();
 
-  Serial.println("BLE advertising as " BLE_NAME);
+  // #19: advertise as fast as the spec allows for a connectable peripheral.
+  // A central can only send its connection request during an advertising
+  // event, so more events per second means more chances for one to land —
+  // aimed at both the ~20% of attempts that fail and the multi-second
+  // latency. Units are 0.625 ms, and 20 ms is the floor for connectable
+  // undirected advertising. Override to compare against NimBLE's default.
+  advertising->setMinInterval(ADV_MIN_INTERVAL);
+  advertising->setMaxInterval(ADV_MAX_INTERVAL);
+
+  // the real GATT registration: without this the characteristics above are
+  // never handed to the NimBLE host, though advertising still runs either way
+  bool serverStarted = bleServer->start();
+  bool advertisingStarted = advertising->start();
+
+  Serial.printf("BLE server start=%d advertising start=%d, advertising as %s\n",
+                serverStarted, advertisingStarted, BLE_NAME);
 }
 #endif
 
@@ -464,6 +493,35 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
 #ifdef SPIKE
 const unsigned long TELEMETRY_TIME = 10000; // in mS
 millisDelay telemetryDelay;
+#endif
+
+#ifdef BLE_SPIKE
+// #19 workaround. A connection attempt the central abandons mid-handshake leaves
+// the controller not advertising while the host still thinks it is: no GAP event
+// is raised, isAdvertising() keeps returning true, and start() therefore no-ops
+// with "advertising already active". Nothing in the API reports the real state,
+// so there is nothing to detect — instead re-arm blind on a timer whenever no
+// client is connected. stop() clears the stale host flag so the following
+// start() actually reaches the controller, which does recover it (verified on
+// the bench). The cost is a sub-millisecond advertising gap every interval, and
+// a small chance of clipping a connection attempt that is in flight at exactly
+// that moment; the central retries, so that is the cheaper risk.
+const unsigned long ADV_REARM_TIME = 10000; // in mS
+millisDelay advRearmDelay;
+
+void rearmAdvertising()
+{
+  if (bleServer->getConnectedCount() > 0)
+    return; // a live connection means advertising state is moot
+
+  NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+  adv->stop();
+  if (!adv->start())
+    Serial.println("BLE advertising re-arm failed");
+}
+#endif
+
+#ifdef SPIKE
 
 // RF test: alternate strobe with the solid colours 1-8, so every step differs from the
 // last and a receiver's log shows each change it missed (score with tools/spike/rf_score.py)
@@ -498,7 +556,7 @@ void printSpikeBanner()
                 "off"
 #endif
   );
-  Serial.println("SPIKE serial commands: r = start RF test, x = stop RF test, t = telemetry now");
+  Serial.println("SPIKE serial commands: r = start RF test, x = stop RF test, t = telemetry, a = adv state, b = stop+start adv");
 }
 
 // Serial commands and periodic telemetry; called from loop()
@@ -520,6 +578,29 @@ void spikeLoop()
     case 't':
       printTelemetry();
       break;
+#ifdef BLE_SPIKE
+    // #19: after an aborted connection attempt kills advertising, does the host
+    // even know? And can the application get it back without a reboot?
+    case 'a':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      Serial.printf("BLE isAdvertising=%d connected=%u; calling start()...\n",
+                    adv->isAdvertising(), bleServer->getConnectedCount());
+      Serial.printf("BLE start() returned %d, isAdvertising now=%d\n",
+                    adv->start(), adv->isAdvertising());
+      break;
+    }
+    // the host's isAdvertising() goes stale (stays true) when the controller
+    // stops after an aborted connect, so start() no-ops with "already active";
+    // stop() first to clear the flag, so start() actually re-issues to the controller
+    case 'b':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      Serial.printf("BLE stop() returned %d, then start() returned %d, isAdvertising=%d\n",
+                    adv->stop(), adv->start(), adv->isAdvertising());
+      break;
+    }
+#endif
     }
   }
 
@@ -537,6 +618,14 @@ void spikeLoop()
     telemetryDelay.repeat();
     printTelemetry();
   }
+
+#ifdef BLE_SPIKE
+  if (advRearmDelay.justFinished())
+  {
+    advRearmDelay.repeat();
+    rearmAdvertising();
+  }
+#endif
 }
 #endif
 
@@ -566,6 +655,7 @@ void setup()
     return;
   }
 
+#ifndef SPIKE_NO_WIFI
   startAccessPoint(WIFI_SSID, WIFI_PASS, localIP, gatewayIP, subnetMask);
 
   setUpDNSServer(dnsServer, localIP);
@@ -574,6 +664,7 @@ void setup()
   webServer.begin();
 
   initWebSocket();
+#endif
 
 #ifdef BLE_SPIKE
   initBLE();
@@ -584,7 +675,15 @@ void setup()
   telemetryDelay.start(TELEMETRY_TIME);
 #endif
 
+#ifdef BLE_SPIKE
+  advRearmDelay.start(ADV_REARM_TIME);
+#endif
+
+#ifdef SPIKE_NO_WIFI
+  Serial.println("Ready; WiFi AP disabled (SPIKE_NO_WIFI), BLE only");
+#else
   Serial.println("Ready; HTTP server started on " + WiFi.softAPIP().toString());
+#endif
 }
 
 void loop()
@@ -600,8 +699,10 @@ void loop()
     } while (xQueueReceive(modeQueue, &requested, 0) == pdTRUE);
   }
 
+#ifndef SPIKE_NO_WIFI
   dnsServer.processNextRequest();
   ws.cleanupClients();
+#endif
 
   if (autoDelay.justFinished())
   {

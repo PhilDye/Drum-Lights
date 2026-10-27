@@ -46,12 +46,13 @@ jobs:
           cat > TX/src/secrets.h <<'EOF'
           #define WIFI_SSID "ci-dummy"
           #define WIFI_PASS "ci-dummy"
+          #define BLE_PASSKEY 123456
           EOF
 
       - name: Build TX firmware
         working-directory: TX
         shell: bash
-        run: pio run 2>&1 | tee build.log
+        run: pio run -e esp32-s3 -e az-delivery-devkit-v4 2>&1 | tee build.log
 
       - name: Firmware size report
         if: always()
@@ -61,7 +62,7 @@ jobs:
           {
             echo "### TX firmware size"
             echo '```'
-            grep -E '^(RAM|Flash):' build.log || echo "no size info (build failed?)"
+            grep -E '^Processing |^(RAM|Flash):' build.log || echo "no size info (build failed?)"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -94,6 +95,7 @@ jobs:
           cat > TX/src/secrets.h <<'EOF'
           #define WIFI_SSID "ci-dummy"
           #define WIFI_PASS "ci-dummy"
+          #define BLE_PASSKEY 123456
           EOF
 
       - name: Run cppcheck

@@ -4,8 +4,6 @@ One-day go / no-go for the iOS app (#17): can the TX run its WiFi AP, web server
 
 Everything here is throwaway. If the answer is no-go, delete this folder, the two `spike-*` envs in `TX/platformio.ini` and the `#ifdef SPIKE` / `#ifdef BLE_SPIKE` blocks in `TX/src/main.cpp`. The normal build (`pio run`, env `az-delivery-devkit-v4`) has none of it compiled in.
 
-No TX hardware to hand? [`harness/`](harness/README.md) runs the same WiFi + web + BLE load on a bare ESP32-S3, with the radio simulated. It covers connection reliability, the soak and heap checks, not the RF check, and is how to answer the "does an S3 fix it?" question in the Recommendation below.
-
 ## Builds
 
 | Env | What it is |
@@ -234,23 +232,74 @@ Record in #19: heap and flash numbers for both builds, the soak summary line, th
 
 ### Answered on an ESP32-S3 — it connects reliably and sub-second
 
-**This is the hardware question the Recommendation below asked for, and the answer is yes.** Measured 2026-10-27 with `harness/` (the TX's full WiFi AP + web + WebSocket + LittleFS + BLE load on a bare S3, RF24 simulated), same Mac as the runs above:
+**This is the hardware question the Recommendation below asked for, and the answer is yes.**
+
+Measured 2026-10-27 on a bare ESP32-S3 (16 MB flash, MAC `98:c3:77:a1:9d:94`, espressif32 7.1.3, NimBLE-Arduino 2.5.2), from the same Mac that produced the TX figures above. The S3 ran a throwaway harness carrying the TX's full load — WiFi AP on channel 6, captive DNS, AsyncWebServer, WebSocket, LittleFS, the same GATT service and the same one-command-queue-on-the-loop-task design — with the RF24 send simulated by an equivalent blocking delay. It has since been deleted as disposable; recover it with `git checkout 7159624 -- TX/tools/spike/harness` if these runs need repeating.
 
 | Build | Success | Median connect | Max |
 | --- | --- | --- | --- |
 | TX `spike-ble` (classic ESP32) | 8/10 | 4.4 s | 10.2 s |
-| S3 harness, re-arm watchdog on | **20/20** | **1.01 s** | 1.08 s |
-| S3 harness, re-arm watchdog **off** | **20/20** | **1.03 s** | 1.15 s |
+| S3, re-arm watchdog on | **20/20** | **1.01 s** | 1.08 s |
+| S3, re-arm watchdog **off** | **20/20** | **1.03 s** | 1.15 s |
 
-Forty cycles, no failures, all 40 disconnects the normal `reason 531` with no supervision timeouts. Heap headroom is also far better: 150,176 free after setup against 85,368 on the TX.
+Forty cycles, no failures, every connect between 0.96 and 1.15 s. All 40 disconnects were `reason 531` (`BLE_ERR_REM_USER_CONN_TERM`, the normal client-initiated close) — **no supervision timeouts**, against 2 spontaneous link losses in 8 connections on the TX's iPhone run.
 
-The watchdog-off column matters most: on the classic ESP32, disabling the re-arm workaround drops it to 0/20 with advertising permanently dead after the first aborted connect. The S3 does not care — **it does not have the bug**, so the whole advertising-death finding above is specific to the classic ESP32's controller.
+**The watchdog-off column is what settles it.** On the classic ESP32, disabling the stop+start re-arm gives 0/20, with advertising permanently dead after the first aborted connect and every later cycle failing at the *scan* stage. The S3 does not notice: 20/20 either way, with `rearm: -1` in the telemetry confirming it was off. **The S3 does not have the aborted-connect advertising bug** — that whole finding is specific to the classic ESP32's controller. Keep the workaround anyway: it is harmless, and the TX still needs it.
 
-Still outstanding on the S3: an iPhone run (only macOS so far, though the two agreed closely on the TX), and the RF check, which needs real TX hardware.
+Heap headroom is also roughly doubled:
 
-**A separate crash surfaced, and it is ours, not the chip's.** The S3 soak ran BLE *and* a phone on the web UI at once — the combination the TX soak never managed — and panicked after ~4 minutes in `AsyncTCP`, after 213 `Too many messages queued` errors: `AsyncClient::_error()` calls `tcp_sent()` on a pcb lwIP already freed. Full detail in `harness/README.md`. **It applies to the production TX unchanged** (same libraries, same `notifyAll()`-per-mode-change), independent of BLE, and is a fix to make in our code — rate-limit or coalesce `notifyAll()` — rather than something to wait on upstream.
+| | TX `spike-ble` | S3 |
+| --- | --- | --- |
+| Free heap after setup | 85,368 | **150,176** |
+| `minheap`, idle | ~83,500 | 148,660 |
+| `maxblock` | 65,524 | 139,252 |
 
-**Where the go/no-go stands.** Everything the spike originally set out to measure passes: flash and RAM fit with headroom, the heap is flat, there are no crashes or resets, and a BLE link once established carried 3,155 commands over 30 minutes with zero loss. Risk 1 (WiFi/BT coexistence) is **not substantiated** — removing WiFi entirely did not improve BLE.
+The ~40 KB `minheap` / ~20 KB `maxblock` bar set earlier in this doc is cleared comfortably; the worst transient across the whole soak was 110,672 / 118,772.
+
+Two caveats. The runs are **macOS only** — on the TX, Mac and iPhone agreed closely (8/10 at 4.4 s vs 8/10 at 4-10 s), so this probably carries over, but an iPhone run on an S3 is the check still outstanding before committing to the chip. And the ~1.0 s floor is so consistent across all 40 cycles that it is almost certainly CoreBluetooth's own connection-setup cost rather than anything the firmware controls; do not expect to tune it lower.
+
+### The S3 soak found a crash — and it is ours, not the chip's
+
+The S3 soak ran BLE commands every 500 ms *and* a phone on the web UI with its hammer enabled: the simultaneous WebSocket + BLE load the TX runs never achieved. It panicked after about 4 minutes.
+
+```
+ERROR: Too many messages queued          (213 times over the run)
+WS client #1 disconnected
+assert failed: tcp_sent IDF/components/lwip/lwip/src/core/tcp.c:2131
+                        (invalid socket state for sent callback)
+  AsyncClient::_error()    AsyncTCP.cpp:904
+  AsyncClient::_s_error()  AsyncTCP.cpp:1307
+  _async_service_task()    AsyncTCP.cpp:199
+rst:0xc (RTC_SW_CPU_RST)
+```
+
+Mechanism: every mode change calls `notifyAll()` → `ws.textAll()`. At roughly 5 broadcasts/second to two WebSocket clients, `AsyncWebSocket`'s per-client queue overflowed (the 213 errors, each one a discarded message). A client then dropped, lwIP delivered a TCP error, and `AsyncClient::_error()` called `tcp_sent()` on a pcb lwIP had already freed when it raised that error — which lwIP's API forbids. Assert, panic, reboot.
+
+**This is an `AsyncTCP-esphome` bug: not BLE, not coexistence, not S3-specific.** The production TX runs the same `AsyncTCP-esphome` / `ESPAsyncWebServer-esphome` and the same broadcast-on-every-change pattern, so **the TX has this latent crash today, with or without BLE.** The TX's own soak missed it only because it ran BLE-only with no WebSocket client attached. Normal TX use is gentler than this test — 5 broadcasts/s to 2 clients is well above an operator tapping buttons — but strobe-heavy use with the web UI open is the same shape of load, and the failure reboots the transmitter mid-set. The fix belongs in our code (rate-limit or coalesce `notifyAll()`, and check `availableForWriteAll()` before broadcasting) rather than waiting on upstream.
+
+Everything else in that 15-minute run was clean, including the recovery:
+
+| | |
+| --- | --- |
+| Panics / reboots | 1 at ~4 min; recovered in ~4 s unaided, BLE client reconnected itself |
+| BLE commands | 1,651 applied for 1,650 sent across the reboot — none lost |
+| Modes applied | 3,032 |
+| `queueDrops` (our own mode queue) | 0 |
+| BLE disconnects | 0 (the link only dropped via the reboot) |
+| WS client disconnects | 4 (queue-overflow casualties) |
+| Free heap at 11 min | 144,984 — flat from 145,180 at 10 s |
+
+Free heap flat over 11 minutes is the no-leak evidence. `minheap` stepped down over the run (150,020 → 110,672), but that is a low-water mark and can only ever decrease, so its steps record transient peaks — the WebSocket reconnect bursts — not a leak.
+
+### Still not covered after the S3 runs
+
+- **RF24 interference (risk 2):** needs the real TX and receivers.
+- **iPhone connect reliability on an S3:** see the caveat above.
+- **A clean WS + BLE soak:** blocked by the `AsyncTCP` crash. Worth rerunning once `notifyAll()` is rate-limited, to confirm nothing else is hiding behind it.
+
+A practical note for anyone repeating this on an S3 dev board: DTR drives GPIO0 there, so any serial tool that asserts DTR on open leaves the chip strapped into download mode until it is power-cycled — several flashing attempts were lost to that before it was understood. Open the port with DTR and RTS both deasserted and leave them that way on close.
+
+**Where the go/no-go stands.** Everything the spike originally set out to measure passes: flash and RAM fit with headroom, the heap is flat, there are no crashes or resets *in the BLE-only soak*, and a BLE link once established carried 3,155 commands over 30 minutes with zero loss. (The later WS + BLE run on the S3 did crash, in `AsyncTCP` — see above. That applies to the TX as well, but it is not a BLE or coexistence failure.) Risk 1 (WiFi/BT coexistence) is **not substantiated** — removing WiFi entirely did not improve BLE.
 
 The blocker is narrower and was not on the original list: **BLE connection establishment on the ESP32.** Measured on the real target platform (iPhone), it is 80% first-try at 4-10 seconds, with occasional spontaneous link loss. That is the one thing the app most depends on, and at those numbers an operator would be waiting ~5 seconds and retrying one time in five, mid-set — the exact experience the app exists to remove.
 

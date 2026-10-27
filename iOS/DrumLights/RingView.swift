@@ -39,8 +39,9 @@ struct RingView: View {
         let dots = RingPattern.dots(kind: kind, colours: colours, at: time)
 
         for (index, dot) in dots.enumerated() {
-            let angle = (Double(index) / Double(dots.count) + turn) * 2 * .pi - .pi / 2
-            let point = CGPoint(x: centre.x + radius * cos(angle), y: centre.y + radius * sin(angle))
+            let angle: Double = (Double(index) / Double(dots.count) + turn) * 2 * .pi - .pi / 2
+            let point = CGPoint(x: centre.x + radius * CGFloat(Foundation.cos(angle)),
+                                y: centre.y + radius * CGFloat(Foundation.sin(angle)))
             let rect = CGRect(x: point.x - dotSize / 2, y: point.y - dotSize / 2, width: dotSize, height: dotSize)
             let colour = flashing ? Color.white : Color(dot.colour)
             var layer = canvas

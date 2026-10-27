@@ -70,13 +70,19 @@ void loop()
     switch (Serial.read())
     {
     case 'a':
+    {
       Serial.printf("isAdvertising=%d connected=%u\n", adv->isAdvertising(), bleServer->getConnectedCount());
-      Serial.printf("start() returned %d, isAdvertising now=%d\n", adv->start(), adv->isAdvertising());
+      bool started = adv->start(); // sequenced: argument evaluation order is unspecified
+      Serial.printf("start() returned %d, isAdvertising now=%d\n", started, adv->isAdvertising());
       break;
+    }
     case 'b':
-      Serial.printf("stop() returned %d, start() returned %d, isAdvertising=%d\n",
-                    adv->stop(), adv->start(), adv->isAdvertising());
+    {
+      bool stopped = adv->stop();
+      bool started = adv->start();
+      Serial.printf("stop() returned %d, start() returned %d, isAdvertising=%d\n", stopped, started, adv->isAdvertising());
       break;
+    }
     }
   }
 

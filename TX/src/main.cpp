@@ -586,8 +586,8 @@ void spikeLoop()
       NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
       Serial.printf("BLE isAdvertising=%d connected=%u; calling start()...\n",
                     adv->isAdvertising(), bleServer->getConnectedCount());
-      Serial.printf("BLE start() returned %d, isAdvertising now=%d\n",
-                    adv->start(), adv->isAdvertising());
+      bool started = adv->start(); // sequenced: argument evaluation order is unspecified
+      Serial.printf("BLE start() returned %d, isAdvertising now=%d\n", started, adv->isAdvertising());
       break;
     }
     // the host's isAdvertising() goes stale (stays true) when the controller
@@ -596,8 +596,10 @@ void spikeLoop()
     case 'b':
     {
       NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      bool stopped = adv->stop(); // sequenced: argument evaluation order is unspecified
+      bool started = adv->start();
       Serial.printf("BLE stop() returned %d, then start() returned %d, isAdvertising=%d\n",
-                    adv->stop(), adv->start(), adv->isAdvertising());
+                    stopped, started, adv->isAdvertising());
       break;
     }
 #endif

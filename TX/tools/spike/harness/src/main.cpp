@@ -37,6 +37,12 @@
 #define BLE_STATE_UUID "E1EBAF93-75C1-4681-8F5B-D07D93D86FDE"
 #define BLE_COMMAND_UUID "53F118A7-863E-429A-BF92-AC19864C8219"
 #define BLE_INFO_UUID "B1AB44F5-A9A1-4152-852B-50A7D7EC8427"
+#ifndef ADV_MIN_INTERVAL
+#define ADV_MIN_INTERVAL 32 // 20 ms in 0.625 ms units, as on the TX
+#endif
+#ifndef ADV_MAX_INTERVAL
+#define ADV_MAX_INTERVAL 48 // 30 ms
+#endif
 
 // the S3 DevKitC-1 LED is on GPIO 48 (38 on v1.1 boards); override with -DLED_PIN=38
 #if !defined(LED_PIN) && defined(RGB_BUILTIN)
@@ -56,6 +62,7 @@ const unsigned long AUTO_TIME = 30000;    // in mS
 const unsigned long TELEMETRY_TIME = 10000; // in mS
 const size_t BLOB_SIZE = 64 * 1024;       // a file to download, standing in for the web UI assets
 const int RETRANSMITS = 5;
+const unsigned long ADV_REARM_TIME = 10000; // in mS, as on the TX
 
 AsyncWebServer webServer(80);
 AsyncWebSocket ws("/ws");
@@ -66,6 +73,11 @@ int currentMode = 0;
 bool autoRunning = false;
 unsigned long autoStarted = 0;
 unsigned long lastTelemetry = 0;
+unsigned long lastRearm = 0;
+// The TX's workaround for the classic ESP32 bug where an aborted connect leaves
+// advertising dead while isAdvertising() still says true (see ../README.md).
+// Toggle with 'w': off is how to tell whether this chip has the bug at all
+bool rearmEnabled = true;
 
 // each counter has a single writer task, so plain volatile is enough for reporting
 volatile uint32_t wsCommands = 0;
@@ -75,6 +87,7 @@ volatile uint32_t bleCommands = 0;
 volatile uint32_t bleConnects = 0;
 volatile uint32_t bleDisconnects = 0;
 volatile uint32_t queueDrops = 0;
+uint32_t rearms = 0;
 uint32_t modesApplied = 0;
 
 #ifndef NO_BLE
@@ -228,7 +241,7 @@ void onWSEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventTyp
 
 size_t buildStats(char *msg, size_t size)
 {
-  StaticJsonDocument<JSON_OBJECT_SIZE(16)> json;
+  StaticJsonDocument<JSON_OBJECT_SIZE(18)> json;
   json["uptime"] = millis() / 1000;
   json["heap"] = ESP.getFreeHeap();
   json["minheap"] = ESP.getMinFreeHeap();
@@ -242,6 +255,8 @@ size_t buildStats(char *msg, size_t size)
   json["bleConn"] = bleConnects;
   json["bleDisc"] = bleDisconnects;
   json["bleCmd"] = bleCommands;
+  json["adv"] = NimBLEDevice::getAdvertising()->isAdvertising();
+  json["rearm"] = rearmEnabled ? (int)rearms : -1; // -1 = watchdog off
 #else
   json["ble"] = nullptr; // not compiled in
 #endif
@@ -361,6 +376,7 @@ void startBLE()
   NimBLEDevice::init(BLE_NAME);
   bleServer = NimBLEDevice::createServer();
   bleServer->setCallbacks(new ServerCallbacks());
+  bleServer->advertiseOnDisconnect(true); // defaults to false in NimBLE-Arduino 2.x
 
   NimBLEService *service = bleServer->createService(BLE_SERVICE_UUID);
   bleState = service->createCharacteristic(BLE_STATE_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
@@ -383,8 +399,27 @@ void startBLE()
   NimBLEAdvertising *advertising = NimBLEDevice::getAdvertising();
   advertising->setAdvertisementData(advData);
   advertising->setScanResponseData(scanData);
-  advertising->start();
-  Serial.println("BLE advertising as \"" BLE_NAME "\"");
+  advertising->setMinInterval(ADV_MIN_INTERVAL);
+  advertising->setMaxInterval(ADV_MAX_INTERVAL);
+
+  // registers the GATT service with the host; without it advertising still
+  // runs but nothing can discover the characteristics
+  bool serverStarted = bleServer->start();
+  bool advertisingStarted = advertising->start();
+  Serial.printf("BLE server start=%d advertising start=%d as \"%s\"\n", serverStarted, advertisingStarted, BLE_NAME);
+}
+
+// stop() clears a stale host flag so start() really reaches the controller
+void rearmAdvertising()
+{
+  if (bleServer->getConnectedCount() > 0)
+    return;
+  NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+  adv->stop();
+  if (adv->start())
+    rearms++;
+  else
+    Serial.println("BLE advertising re-arm failed");
 }
 #endif
 
@@ -421,7 +456,7 @@ void setup()
   startBLE();
 #endif
 
-  Serial.printf("Ready, heap=%u. Serial: t = stats now\n", ESP.getFreeHeap());
+  Serial.printf("Ready, heap=%u. Serial: t = stats, w = toggle adv re-arm, a = adv state + start(), b = stop()+start()\n", ESP.getFreeHeap());
   printTelemetry();
 }
 
@@ -445,8 +480,44 @@ void loop()
   }
 
   while (Serial.available())
-    if (Serial.read() == 't')
+  {
+    switch (Serial.read())
+    {
+    case 't':
       printTelemetry();
+      break;
+#ifndef NO_BLE
+    case 'w':
+      rearmEnabled = !rearmEnabled;
+      Serial.printf("Advertising re-arm watchdog %s\n", rearmEnabled ? "on" : "off");
+      break;
+    case 'a':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      bool was = adv->isAdvertising(); // sequenced: argument evaluation order is unspecified
+      bool started = adv->start();
+      Serial.printf("isAdvertising=%d connected=%u; start() returned %d\n", was, bleServer->getConnectedCount(), started);
+      break;
+    }
+    case 'b':
+    {
+      NimBLEAdvertising *adv = NimBLEDevice::getAdvertising();
+      bool stopped = adv->stop();
+      bool started = adv->start();
+      Serial.printf("stop() returned %d, start() returned %d, isAdvertising=%d\n", stopped, started, adv->isAdvertising());
+      break;
+    }
+#endif
+    }
+  }
+
+#ifndef NO_BLE
+  if (rearmEnabled && millis() - lastRearm >= ADV_REARM_TIME)
+  {
+    lastRearm = millis();
+    rearmAdvertising();
+  }
+#endif
 
   if (millis() - lastTelemetry >= TELEMETRY_TIME)
   {

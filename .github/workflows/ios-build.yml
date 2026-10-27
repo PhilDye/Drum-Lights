@@ -1,0 +1,51 @@
+name: iOS build
+
+on:
+  push:
+    branches: [main, ios-live-tab] # TEMP: remove before merge
+    paths:
+      - 'iOS/**'
+      - 'TX/app/src/modes.json'
+      - '.github/workflows/ios-build.yml'
+  pull_request:
+    paths:
+      - 'iOS/**'
+      - 'TX/app/src/modes.json'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+jobs:
+  kit:
+    name: DrumLightsKit tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      # also exercises WebSocketTransport against a stand-in for the TX
+      - name: Start fake TX
+        run: |
+          pip install websockets
+          python iOS/DrumLightsKit/Tools/fake_tx.py &
+
+      - name: Test
+        working-directory: iOS/DrumLightsKit
+        env:
+          DRUMLIGHTS_WS_URL: ws://127.0.0.1:8765/ws
+        run: swift test
+
+  app:
+    name: App (Simulator build)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        working-directory: iOS
+        run: |
+          xcodebuild -project DrumLights.xcodeproj -scheme DrumLights \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

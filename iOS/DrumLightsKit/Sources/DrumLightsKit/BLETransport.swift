@@ -8,7 +8,7 @@ import Foundation
 ///   A pending `connect` never times out, so iOS reconnects as soon as the TX is back in range,
 ///   even with the app in the background (`bluetooth-central` background mode).
 /// - Supports CoreBluetooth state restoration, so iOS can relaunch the app for BLE events.
-/// - Pairing is iOS's job: the first encrypted access shows the system PIN prompt, then iOS
+/// - Pairing is iOS's job: the TX asks for it on connect, iOS shows the PIN prompt, then
 ///   keeps the bond. Apps can't remove a bond; "Forget" here only forgets which TX to use.
 @MainActor
 public final class BLETransport: NSObject, Transport {
@@ -211,8 +211,6 @@ public final class BLETransport: NSObject, Transport {
             switch characteristic.uuid {
             case stateUUID:
                 stateCharacteristic = characteristic
-                // subscribing to an encrypted characteristic brings up the PIN prompt
-                // on first connect, rather than on the first tap
                 p.setNotifyValue(true, for: characteristic)
                 p.readValue(for: characteristic)
             case commandUUID:

@@ -31,11 +31,12 @@ In the Simulator, which has no Bluetooth, the app drives a pretend TX (`MockTran
 
 ## Firmware this expects
 
-The app speaks the service in `DESIGN.md` section 3.2. Notes for the TX side of #20:
+The Bluetooth service is in the `esp32-s3` TX build ([#44](https://github.com/PhilDye/Drum-Lights/pull/44)); see "Building the TX firmware" in the root README for the PIN. The classic ESP32 build has no Bluetooth, so with it the app needs the WiFi fallback.
 
-- **State** should require encryption for read and notify, like Command. The app subscribes to State as soon as it connects, so the PIN prompt then appears straight away rather than on the operator's first tap mid-song.
-- **Command** writes may be longer than 4 bytes. The app sends only the 4-byte mode today, but its `Command` type carries an optional parameter block (section 3.6), so read the first 4 bytes and ignore the rest.
-- **Info** is read once per connection; `catalogue` drives the mismatch warning in Settings.
+- The TX starts pairing as soon as a phone connects, so the PIN prompt comes up on connect, not on the first tap.
+- If the TX's pairings are cleared (BOOT held for 5 s), the iPhone must "Forget This Device" in Settings › Bluetooth before it can pair again.
+- The TX ignores Command writes that aren't exactly 4 bytes. The app's `Command` has an optional parameter block (`DESIGN.md` section 3.6) but sends only the 4-byte mode; sending parameters needs the TX to accept longer writes first.
+- Info is read once per connection; its `catalogue` drives the mismatch warning in Settings.
 
 ## Tests
 

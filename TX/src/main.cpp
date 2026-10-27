@@ -296,12 +296,49 @@ void initBLE()
 }
 #endif
 
-// Tell every connected controller the current state
+// State broadcasts are coalesced: a change only marks the state dirty, and
+// flushState() on the loop task sends the latest at most every STATE_INTERVAL.
+// Sending one WebSocket message per change let a burst (strobe, a controller
+// hammering commands) overflow AsyncWebSocket's per-client queue, which ended
+// in an AsyncTCP panic in the #19 soak
+const unsigned long STATE_INTERVAL = 100; // in mS
+bool stateChanged = false; // not yet sent to anyone
+bool wsBehind = false;     // a WebSocket client was skipped and still needs the latest
+unsigned long lastStateSent = 0;
+
+// Tell every connected controller the current state (sent from flushState())
 void notifyAll()
 {
+  stateChanged = true;
+}
+
+// Called from loop()
+void flushState()
+{
+  if (!(stateChanged || wsBehind) || millis() - lastStateSent < STATE_INTERVAL)
+    return;
+  lastStateSent = millis();
+
   char msg[STATE_MSG_SIZE];
   size_t len = buildStateMessage(msg, sizeof(msg));
-  ws.textAll(msg, len);
+
+  // skip a client whose queue is full instead of overflowing it; it gets the
+  // latest state on a later pass once it has drained (the others get a harmless
+  // repeat on those passes, still no more than one per STATE_INTERVAL)
+  wsBehind = false;
+  for (AsyncWebSocketClient *client : ws.getClients())
+  {
+    if (client->status() != WS_CONNECTED)
+      continue;
+    if (client->canSend())
+      client->text(msg, len);
+    else
+      wsBehind = true;
+  }
+
+  if (!stateChanged)
+    return; // a catch-up pass for a slow client; the rest already have this state
+  stateChanged = false;
 
   Serial.printf("State broadcasted to WS: %s\n", msg);
 
@@ -710,6 +747,8 @@ void loop()
   {
     nextAutoMode();
   }
+
+  flushState();
 
 #ifdef SPIKE
   spikeLoop();

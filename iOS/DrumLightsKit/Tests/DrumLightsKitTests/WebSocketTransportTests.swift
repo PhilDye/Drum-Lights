@@ -35,10 +35,7 @@ final class WebSocketTransportTests: XCTestCase {
 
         _ = try await next { $0 == .link(.connected) }
         try await transport.send(Command(mode: 0))
-        let event = try await next {
-            if case .state = $0 { return true }
-            return false
-        }
-        XCTAssertEqual(event, .state(TXState(mode: 0, auto: false)))
+        // the TX may still be sending its on-connect state, so wait for the echo of Off
+        _ = try await next { $0 == .state(TXState(mode: 0, auto: false)) }
     }
 }

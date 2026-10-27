@@ -1,6 +1,6 @@
 # Drum Lights iOS app: design proposal
 
-Status: proposal, nothing built yet. This document covers what a native iOS controller should do, how it talks to the existing transmitter (TX), what has to change in the TX firmware, and what the web UI keeps doing for everyone without the app.
+Status: phase 2 in progress. The app's Live tab and `DrumLightsKit` are built (see [README.md](README.md)); the TX Bluetooth service is not yet. This document covers what a native iOS controller should do, how it talks to the existing transmitter (TX), what has to change in the TX firmware, and what the web UI keeps doing for everyone without the app.
 
 Tracking issue and delivery plan: [PhilDye/Drum-Lights#17](https://github.com/PhilDye/Drum-Lights/issues/17).
 

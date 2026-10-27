@@ -8,12 +8,13 @@ import SwiftUI
 final class AppModel {
     let settings: AppSettings
     let controller: LightsController
-    @ObservationIgnored private let haptics: Haptics
-    @ObservationIgnored private let bluetooth: BLETransport?
+    private let haptics: Haptics
+    private let bluetooth: BLETransport?
 
-    init(settings: AppSettings = AppSettings()) {
+    init(settings: AppSettings? = nil) {
         // the bundled catalogue is part of the build; if it doesn't load, the build is broken
         let catalogue = try! Catalogue.bundled()
+        let settings = settings ?? AppSettings()
         self.settings = settings
 
         #if targetEnvironment(simulator)

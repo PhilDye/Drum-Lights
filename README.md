@@ -50,9 +50,9 @@ It runs an AsyncWebServer serving a simple HTML/CSS/JS page from a filesystem, w
 
 The RF24 module uses a configurable transmit power with multiple channels available, but does not avoid packet collision with other sources using the same frequency. For this reason we retransmit each command multiple times in quick succession, in the hope that 'one gets through'. It also requires a stable 3.3v supply, which at high-power transmission could exceed that available from the ESP32, so a separate buck converter is used fed from the power supply.
 
-## iOS app (proposed)
+## iOS app (in progress)
 
-A native iOS controller talking to the same TX over Bluetooth LE is proposed in [iOS/DESIGN.md](iOS/DESIGN.md). The web interface remains the primary controller for everyone else.
+A native iOS controller talking to the same TX over Bluetooth LE is designed in [iOS/DESIGN.md](iOS/DESIGN.md); build notes are in [iOS/README.md](iOS/README.md). The web interface remains the primary controller for everyone else.
 
 ## Receiver
 

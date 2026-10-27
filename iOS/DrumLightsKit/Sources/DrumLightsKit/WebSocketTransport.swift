@@ -8,7 +8,9 @@ import FoundationNetworking
 /// after the screen locks.
 ///
 /// The TX echoes its state after every command, so the next state message after a send
-/// is taken as the acceptance.
+/// is taken as the acceptance. That is approximate: the messages carry no request id, so a
+/// state sent for another reason at the same moment (an Auto change, another controller,
+/// the state on connect) also counts. Bluetooth write responses don't have this problem.
 @MainActor
 public final class WebSocketTransport: Transport {
     public let kind = TransportKind.wifi

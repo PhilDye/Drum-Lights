@@ -50,6 +50,24 @@ It runs an AsyncWebServer serving a simple HTML/CSS/JS page from a filesystem, w
 
 The RF24 module uses a configurable transmit power with multiple channels available, but does not avoid packet collision with other sources using the same frequency. For this reason we retransmit each command multiple times in quick succession, in the hope that 'one gets through'. It also requires a stable 3.3v supply, which at high-power transmission could exceed that available from the ESP32, so a separate buck converter is used fed from the power supply.
 
+### Building the TX firmware
+
+There are two PlatformIO environments in `TX/platformio.ini`:
+
+- `esp32-s3` (default): an ESP32-S3 dev-kit, with the web UI **and** the Bluetooth LE service the iOS app uses. The classic ESP32's Bluetooth connects too slowly and unreliably for live use (see #19), hence the move. The RF24 goes on the S3's default SPI pins: SCK 12, MISO 13, MOSI 11, CS 10, CE 9.
+- `az-delivery-devkit-v4`: the original classic ESP32 TX and PCB, web UI only (RF24 on SCK 18, MISO 19, MOSI 23, CS 5, CE 17).
+
+Create `TX/src/secrets.h` (it's git-ignored):
+
+```cpp
+#define WIFI_SSID "Drum Lights"
+#define WIFI_PASS "your-wifi-password"
+#define BLE_PASSKEY 482916          // 6-digit Bluetooth PIN; no leading zero
+// #define BLE_NAME "Swan Samba TX" // optional, so neighbouring bands don't collide
+```
+
+A phone pairs once with the PIN and then reconnects silently. Up to four controllers can be connected at once and eight pairings are remembered. **Hold the BOOT button for 5 seconds** to forget every pairing (the LED flashes three times), e.g. after losing a phone; paired iPhones then need "Forget This Device" in their Bluetooth settings before they can pair again.
+
 ## iOS app (in progress)
 
 A native iOS controller talking to the same TX over Bluetooth LE is designed in [iOS/DESIGN.md](iOS/DESIGN.md); build notes are in [iOS/README.md](iOS/README.md). The web interface remains the primary controller for everyone else.

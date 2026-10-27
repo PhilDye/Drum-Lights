@@ -4,6 +4,8 @@ One-day go / no-go for the iOS app (#17): can the TX run its WiFi AP, web server
 
 Everything here is throwaway. If the answer is no-go, delete this folder, the two `spike-*` envs in `TX/platformio.ini` and the `#ifdef SPIKE` / `#ifdef BLE_SPIKE` blocks in `TX/src/main.cpp`. The normal build (`pio run`, env `az-delivery-devkit-v4`) has none of it compiled in.
 
+No TX hardware to hand? [`harness/`](harness/README.md) runs the same WiFi + web + BLE load on a bare ESP32-S3 (or other dev board), with the radio simulated. It covers the soak and heap checks, not the RF check.
+
 ## Builds
 
 | Env | What it is |

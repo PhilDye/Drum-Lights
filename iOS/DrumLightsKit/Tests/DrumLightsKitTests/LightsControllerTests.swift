@@ -146,9 +146,10 @@ final class LightsControllerTests: XCTestCase {
         XCTAssertEqual(feedback.events, [.strobe], "heavy haptic on press, before the TX answers")
         await pause(200)
         lights.endStrobe()
+        // a strobe sent just before release may still be on its way to the TX
+        await eventually("in-flight strobe lands") { tx.received.filter { $0.mode == 98 }.count == lights.strobeCount }
         let strobes = tx.received.filter { $0.mode == 98 }.count
         XCTAssertGreaterThanOrEqual(strobes, 3)
-        XCTAssertEqual(lights.strobeCount, strobes)
         await pause(100)
         XCTAssertEqual(tx.received.filter { $0.mode == 98 }.count, strobes, "stops on release")
         XCTAssertFalse(feedback.events.contains(.acknowledged), "no tick on top of the strobe thud")

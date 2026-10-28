@@ -112,7 +112,7 @@ struct WiFiFallbackView: View {
             Section {
                 Toggle("Use WiFi when Bluetooth can't connect", isOn: $settings.wifiFallbackEnabled)
             } footer: {
-                Text("After a few seconds without Bluetooth, the app joins the transmitter's hotspot and uses its WebSocket. While on the hotspot your phone has no internet, and control stops soon after the screen locks. The app leaves the hotspot once Bluetooth is back.")
+                Text("After a few seconds without Bluetooth, the app uses the transmitter's WebSocket. Join the transmitter's hotspot yourself in Settings › Wi-Fi first. While on the hotspot your phone has no internet, and control stops soon after the screen locks.")
             }
 
             if settings.wifiFallbackEnabled {
@@ -122,7 +122,7 @@ struct WiFiFallbackView: View {
                         .autocorrectionDisabled()
                     SecureField("Password", text: $settings.wifiPassword)
                 } footer: {
-                    Text("WIFI_SSID and WIFI_PASS from the transmitter's secrets.h. Leave the name empty if you join the hotspot yourself.")
+                    Text("Not used in this build: joining the hotspot automatically needs the Hotspot capability, which is off until the app is signed with a paid developer account.")
                 }
             }
         }

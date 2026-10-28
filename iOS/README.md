@@ -16,7 +16,7 @@ Status: phase 2 of [#17](https://github.com/PhilDye/Drum-Lights/issues/17), trac
 ## Building and running
 
 1. Open `iOS/DrumLights.xcodeproj` in Xcode.
-2. Choose your team under Signing & Capabilities. The Hotspot Configuration capability (used by the WiFi fallback) needs a paid Apple Developer Program membership; with a free account, remove `Config/DrumLights.entitlements` from the build settings and the WiFi fallback won't be able to join the hotspot for you.
+2. Choose your team under Signing & Capabilities. A free (Personal Team) account works: the Hotspot Configuration capability is **temporarily switched off** so the app can be signed without a paid Apple Developer Program membership. Until it's back, the WiFi fallback can't join the TX hotspot by itself; join it in the iOS Settings app first. To restore it with a paid account, revert the commit "iOS: switch off the Hotspot capability for free accounts" (it puts `CODE_SIGN_ENTITLEMENTS = Config/DrumLights.entitlements` back in both target configurations and the original Settings wording).
 3. Run on an iPhone (iOS 17 or later) near a TX.
 
 In the Simulator, which has no Bluetooth, the app drives a pretend TX (`MockTransport`): it connects, echoes commands, runs Auto, and shows "Connected · Demo".

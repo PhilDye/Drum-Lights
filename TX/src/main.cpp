@@ -435,6 +435,10 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
 {
 #define WIFI_CHANNEL 6
 
+  // Keep the AP config out of flash. A stored PMK isn't updated when secrets.h
+  // changes, so the AP would reject the new password as incorrect
+  WiFi.persistent(false);
+
   // Set the WiFi mode to access point and station
   WiFi.mode(WIFI_MODE_AP);
 
@@ -444,12 +448,18 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
   // Start the soft access point with the given ssid, password, channel, max number of clients
   WiFi.softAP(ssid, password, WIFI_CHANNEL);
 
+  wifi_config_t apConfig;
+  esp_wifi_get_config(WIFI_IF_AP, &apConfig);
+
   // Disable AMPDU RX on the ESP32 WiFi to fix a bug on Android
   esp_wifi_stop();
   esp_wifi_deinit();
   wifi_init_config_t my_config = WIFI_INIT_CONFIG_DEFAULT();
   my_config.ampdu_rx_enable = false;
+  my_config.nvs_enable = 0; // ignore anything already stored in flash
   esp_wifi_init(&my_config);
+  esp_wifi_set_mode(WIFI_MODE_AP);
+  esp_wifi_set_config(WIFI_IF_AP, &apConfig);
   esp_wifi_start();
   vTaskDelay(100 / portTICK_PERIOD_MS); // Add a small delay
 }

@@ -58,6 +58,8 @@ const byte RETRANSMITS = 5; // how many times we retransmit every message, for r
 #define LED_BUILTIN 2
 #endif
 #define BOOT_BUTTON_PIN 0
+const unsigned long LED_FLASH_TIME = 50; // in mS, how long the LED shows a command
+millisDelay ledFlash; // the delay object
 
 int CurrentMode = 0;
 
@@ -299,11 +301,23 @@ void sendMode(int mode)
   notifyAll();
 }
 
+// Flash the LED to show a command; loop() turns it off again. A flash already
+// running is left to finish, so a burst of commands still shows as separate flashes
+void flashLED()
+{
+  if (ledFlash.isRunning())
+    return;
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  ledFlash.start(LED_FLASH_TIME);
+}
+
 // The single entry point for a mode requested by any controller
 // (only call from the loop task; other tasks use requestMode())
 void applyMode(int newMode)
 {
   Serial.printf("Mode #%d requested\n", newMode);
+  flashLED();
 
   if (newMode == AUTO_MODE)
   {
@@ -682,6 +696,11 @@ void loop()
   if (autoDelay.justFinished())
   {
     nextAutoMode();
+  }
+
+  if (ledFlash.justFinished())
+  {
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   flushState();

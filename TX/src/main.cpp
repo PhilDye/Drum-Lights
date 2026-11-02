@@ -640,8 +640,10 @@ void setup()
 #if ARDUINO_USB_CDC_ON_BOOT
   // on USB CDC, Serial only becomes true once a computer opens the port, so an
   // unbounded wait would hang a TX powered from a battery pack; and don't let
-  // writes block for want of a reader
-  Serial.setTxTimeoutMs(0);
+  // writes block for want of a reader. Not 0: HWCDC counts down from it and
+  // wraps, so a host that is plugged in but not reading hangs the first write
+  // that finds the buffer full. Past the timeout HWCDC drops output instead
+  Serial.setTxTimeoutMs(10);
   for (unsigned long start = millis(); !Serial && millis() - start < 1000;)
     delay(10);
 #endif

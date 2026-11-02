@@ -1,0 +1,95 @@
+{
+  "catalogue": 1,
+  "colours": {
+    "green":  { "name": "Green",  "fastled": "Green",     "hex": "#008000" },
+    "yellow": { "name": "Yellow", "fastled": "Gold",      "hex": "#FFD700" },
+    "blue":   { "name": "Blue",   "fastled": "Blue",      "hex": "#0000FF" },
+    "cyan":   { "name": "Cyan",   "fastled": "Cyan",      "hex": "#00FFFF" },
+    "red":    { "name": "Red",    "fastled": "Red",       "hex": "#FF0000" },
+    "pink":   { "name": "Pink",   "fastled": "Indigo",    "hex": "#4B0082" },
+    "orange": { "name": "Orange", "fastled": "OrangeRed", "hex": "#FF4500" },
+    "white":  { "name": "White",  "fastled": "White",     "hex": "#FFFFFF" }
+  },
+  "effects": [
+    {
+      "id": "solid",
+      "name": "Solid",
+      "modes": [
+        { "mode": 1, "colours": ["green"] },
+        { "mode": 2, "colours": ["yellow"] },
+        { "mode": 3, "colours": ["blue"] },
+        { "mode": 6, "colours": ["cyan"] },
+        { "mode": 4, "colours": ["red"] },
+        { "mode": 7, "colours": ["pink"] },
+        { "mode": 8, "colours": ["orange"] },
+        { "mode": 5, "colours": ["white"] }
+      ]
+    },
+    {
+      "id": "twinkle",
+      "name": "Twinkle",
+      "modes": [
+        { "mode": 81, "colours": ["green"] },
+        { "mode": 82, "colours": ["yellow"] },
+        { "mode": 83, "colours": ["blue"] },
+        { "mode": 86, "colours": ["cyan"] },
+        { "mode": 84, "colours": ["red"] },
+        { "mode": 87, "colours": ["pink"] },
+        { "mode": 88, "colours": ["orange"] },
+        { "mode": 85, "colours": ["white"] }
+      ],
+      "twoColour": [
+        { "mode": 61, "colours": ["green", "red"] },
+        { "mode": 62, "colours": ["yellow", "blue"] },
+        { "mode": 63, "colours": ["blue", "white"] },
+        { "mode": 64, "colours": ["red", "white"] },
+        { "mode": 68, "colours": ["orange", "green"] }
+      ]
+    },
+    {
+      "id": "chase",
+      "name": "Chase",
+      "modes": [
+        { "mode": 11, "colours": ["green"] },
+        { "mode": 12, "colours": ["yellow"] },
+        { "mode": 13, "colours": ["blue"] },
+        { "mode": 16, "colours": ["cyan"] },
+        { "mode": 14, "colours": ["red"] },
+        { "mode": 17, "colours": ["pink"] },
+        { "mode": 18, "colours": ["orange"] },
+        { "mode": 15, "colours": ["white"] }
+      ],
+      "twoColour": [
+        { "mode": 21, "colours": ["green", "red"] },
+        { "mode": 22, "colours": ["yellow", "blue"] },
+        { "mode": 23, "colours": ["blue", "white"] },
+        { "mode": 24, "colours": ["red", "white"] },
+        { "mode": 28, "colours": ["orange", "green"] }
+      ]
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "modes": [
+        { "mode": 50, "colours": ["orange"] },
+        { "mode": 51, "colours": ["green"] },
+        { "mode": 52, "colours": ["blue"] },
+        { "mode": 53, "colours": ["red"] }
+      ]
+    },
+    {
+      "id": "fx",
+      "name": "Effects",
+      "modes": [
+        { "mode": 91, "name": "Rio Spin" },
+        { "mode": 92, "name": "Rio Disco" },
+        { "mode": 93, "name": "Rio Flag" },
+        { "mode": 99, "name": "Rainbow" },
+        { "mode": 97, "name": "Hazards" },
+        { "mode": 199, "name": "999", "confirm": { "title": "999 Mode", "message": "Activate blue strobes?" } }
+      ]
+    }
+  ],
+  "actions": { "off": 0, "auto": -1, "strobe": 98 },
+  "auto": [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 81, 82, 83, 84, 85, 86, 87, 88]
+}

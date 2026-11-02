@@ -371,7 +371,7 @@ class Component extends DCLogic {
       const y = (85 + 72 * Math.sin(a) - 6).toFixed(1);
       let c = m.cols[0], o = 1, delay = 0;
       switch (m.kind) {
-        case 'chase': c = m.cols[Math.floor(i / 6) % m.cols.length]; o = tail[i % 6]; break;
+        case 'chase': c = m.cols[Math.floor(i / 6) % m.cols.length]; o = tail[5 - i % 6]; break;
         case 'twinkle': case 'rio-disco': c = m.cols[i % m.cols.length]; delay = (i * 373) % 1600; break;
         case 'fire': c = m.cols[i % 3]; delay = (i * 97) % 450; break;
         case 'rio-spin': c = m.cols[Math.floor(i / 8)]; break;

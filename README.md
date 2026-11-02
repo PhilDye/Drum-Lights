@@ -68,9 +68,9 @@ Create `TX/src/secrets.h` (it's git-ignored):
 
 A phone pairs once with the PIN and then reconnects silently. Up to four controllers can be connected at once and eight pairings are remembered. **Hold the BOOT button for 5 seconds** to forget every pairing (the LED flashes three times), e.g. after losing a phone; paired iPhones then need "Forget This Device" in their Bluetooth settings before they can pair again.
 
-## iOS app (proposed)
+## iOS app (in progress)
 
-A native iOS controller talking to the same TX over Bluetooth LE is proposed in [iOS/DESIGN.md](iOS/DESIGN.md). The web interface remains the primary controller for everyone else.
+A native iOS controller talking to the same TX over Bluetooth LE is designed in [iOS/DESIGN.md](iOS/DESIGN.md); build notes are in [iOS/README.md](iOS/README.md). The web interface remains the primary controller for everyone else.
 
 ## Receiver
 

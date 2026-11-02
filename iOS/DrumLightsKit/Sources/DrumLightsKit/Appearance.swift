@@ -149,7 +149,8 @@ public enum RingPattern {
             switch kind {
             case .chase:
                 colour = cols[(i / 6) % cols.count]
-                opacity = tail[i % 6]
+                // the ring turns towards higher indexes, so the brightest dot of each six leads
+                opacity = tail[5 - i % 6]
             case .twinkle, .rioDisco:
                 colour = cols[i % cols.count]
                 opacity = twinkle(time, delay: Double((i * 373) % 1600) / 1000)

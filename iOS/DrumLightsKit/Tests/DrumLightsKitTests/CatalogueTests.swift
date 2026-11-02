@@ -84,7 +84,10 @@ final class CatalogueTests: XCTestCase {
         let blue = RGB(hex: "#0000FF")
         let chase = RingPattern.dots(kind: .chase, colours: [red, blue], at: 0)
         XCTAssertEqual(chase.count, RingPattern.dotCount)
-        XCTAssertEqual(chase[0], .init(colour: red, opacity: 1))
+        // the brightest dot leads as the ring turns towards higher indexes
+        XCTAssertEqual(chase[5], .init(colour: red, opacity: 1))
+        XCTAssertEqual(chase[4].opacity, 0.5)
+        XCTAssertEqual(chase[0].opacity, 0.04)
         XCTAssertEqual(chase[6].colour, blue)
         XCTAssertEqual(RingPattern.rotation(kind: .chase, at: 3), 0.5, accuracy: 1e-9)
         XCTAssertEqual(RingPattern.rotation(kind: .solid, at: 3), 0)

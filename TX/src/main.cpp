@@ -135,15 +135,26 @@ public:
     }
 };
 
+// Hold in an infinite loop, blinking the LED. The pauses matter on an S3, whose
+// LED is addressable and only takes new data after a gap between writes
+void haltWithBlink()
+{
+  while (1)
+  {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
+  }
+}
+
 void initRadio()
 {
   // initialize the transceiver on the SPI bus
   if (!radio.begin())
   {
     Serial.println(F("Radio hardware is not responding!!"));
-    // hold in infinite loop
-    while (1)
-      digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
+    haltWithBlink();
   }
 
   radio.openWritingPipe(address);
@@ -625,9 +636,7 @@ void setup()
   if (modeQueue == NULL)
   {
     Serial.println(F("Mode queue could not be created!!"));
-    // hold in infinite loop
-    while (1)
-      digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
+    haltWithBlink();
   }
 
   initRadio();

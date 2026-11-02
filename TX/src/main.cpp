@@ -58,6 +58,8 @@ const byte RETRANSMITS = 5; // how many times we retransmit every message, for r
 #define LED_BUILTIN 2
 #endif
 #define BOOT_BUTTON_PIN 0
+const unsigned long LED_FLASH_TIME = 50; // in mS, how long the LED shows a command
+millisDelay ledFlash; // the delay object
 
 int CurrentMode = 0;
 
@@ -135,15 +137,26 @@ public:
     }
 };
 
+// Hold in an infinite loop, blinking the LED. The pauses matter on an S3, whose
+// LED is addressable and only takes new data after a gap between writes
+void haltWithBlink()
+{
+  while (1)
+  {
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(500);
+  }
+}
+
 void initRadio()
 {
   // initialize the transceiver on the SPI bus
   if (!radio.begin())
   {
     Serial.println(F("Radio hardware is not responding!!"));
-    // hold in infinite loop
-    while (1)
-      digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
+    haltWithBlink();
   }
 
   radio.openWritingPipe(address);
@@ -288,11 +301,23 @@ void sendMode(int mode)
   notifyAll();
 }
 
+// Flash the LED to show a command; loop() turns it off again. A flash already
+// running is left to finish, so a burst of commands still shows as separate flashes
+void flashLED()
+{
+  if (ledFlash.isRunning())
+    return;
+
+  digitalWrite(LED_BUILTIN, HIGH);
+  ledFlash.start(LED_FLASH_TIME);
+}
+
 // The single entry point for a mode requested by any controller
 // (only call from the loop task; other tasks use requestMode())
 void applyMode(int newMode)
 {
   Serial.printf("Mode #%d requested\n", newMode);
+  flashLED();
 
   if (newMode == AUTO_MODE)
   {
@@ -410,6 +435,10 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
 {
 #define WIFI_CHANNEL 6
 
+  // Keep the AP config out of flash. A stored PMK isn't updated when secrets.h
+  // changes, so the AP would reject the new password as incorrect
+  WiFi.persistent(false);
+
   // Set the WiFi mode to access point and station
   WiFi.mode(WIFI_MODE_AP);
 
@@ -419,12 +448,18 @@ void startAccessPoint(const char *ssid, const char *password, const IPAddress &l
   // Start the soft access point with the given ssid, password, channel, max number of clients
   WiFi.softAP(ssid, password, WIFI_CHANNEL);
 
+  wifi_config_t apConfig;
+  esp_wifi_get_config(WIFI_IF_AP, &apConfig);
+
   // Disable AMPDU RX on the ESP32 WiFi to fix a bug on Android
   esp_wifi_stop();
   esp_wifi_deinit();
   wifi_init_config_t my_config = WIFI_INIT_CONFIG_DEFAULT();
   my_config.ampdu_rx_enable = false;
+  my_config.nvs_enable = 0; // ignore anything already stored in flash
   esp_wifi_init(&my_config);
+  esp_wifi_set_mode(WIFI_MODE_AP);
+  esp_wifi_set_config(WIFI_IF_AP, &apConfig);
   esp_wifi_start();
   vTaskDelay(100 / portTICK_PERIOD_MS); // Add a small delay
 }
@@ -615,8 +650,10 @@ void setup()
 #if ARDUINO_USB_CDC_ON_BOOT
   // on USB CDC, Serial only becomes true once a computer opens the port, so an
   // unbounded wait would hang a TX powered from a battery pack; and don't let
-  // writes block for want of a reader
-  Serial.setTxTimeoutMs(0);
+  // writes block for want of a reader. Not 0: HWCDC counts down from it and
+  // wraps, so a host that is plugged in but not reading hangs the first write
+  // that finds the buffer full. Past the timeout HWCDC drops output instead
+  Serial.setTxTimeoutMs(10);
   for (unsigned long start = millis(); !Serial && millis() - start < 1000;)
     delay(10);
 #endif
@@ -625,9 +662,7 @@ void setup()
   if (modeQueue == NULL)
   {
     Serial.println(F("Mode queue could not be created!!"));
-    // hold in infinite loop
-    while (1)
-      digitalWrite(LED_BUILTIN, millis() % 1000 < 500 ? HIGH : LOW);
+    haltWithBlink();
   }
 
   initRadio();
@@ -673,6 +708,11 @@ void loop()
   if (autoDelay.justFinished())
   {
     nextAutoMode();
+  }
+
+  if (ledFlash.justFinished())
+  {
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   flushState();

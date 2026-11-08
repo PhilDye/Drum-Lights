@@ -120,7 +120,7 @@ public:
 
     const String targetURL;
 
-    bool canHandle(AsyncWebServerRequest *request) override
+    bool canHandle(AsyncWebServerRequest *request) const override
     {
         // redirect if not in wifi client mode (through filter)
         // and request for different host (due to DNS * response)
@@ -243,19 +243,13 @@ void flushState()
   char msg[STATE_MSG_SIZE];
   size_t len = buildStateMessage(msg, sizeof(msg));
 
-  // skip a client whose queue is full instead of overflowing it; it gets the
-  // latest state on a later pass once it has drained (the others get a harmless
-  // repeat on those passes, still no more than one per STATE_INTERVAL)
-  wsBehind = false;
-  for (AsyncWebSocketClient *client : ws.getClients())
-  {
-    if (client->status() != WS_CONNECTED)
-      continue;
-    if (client->canSend())
-      client->text(msg, len);
-    else
-      wsBehind = true;
-  }
+  // a client whose queue is full is skipped instead of overflowing it; it gets
+  // the latest state on a later pass once it has drained (the others get a
+  // harmless repeat on those passes, still no more than one per STATE_INTERVAL).
+  // textAll() holds the client list lock, which iterating getClients() doesn't,
+  // and AsyncTCP adds and removes clients from its own task
+  AsyncWebSocket::SendStatus sent = ws.textAll(msg, len);
+  wsBehind = sent == AsyncWebSocket::PARTIALLY_ENQUEUED || (sent == AsyncWebSocket::DISCARDED && ws.count() > 0);
 
   if (!stateChanged)
     return; // a catch-up pass for a slow client; the rest already have this state
@@ -377,7 +371,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
 
     const size_t size = JSON_OBJECT_SIZE(1);
     StaticJsonDocument<size> json;
-    DeserializationError err = deserializeJson(json, data);
+    DeserializationError err = deserializeJson(json, data, len); // data isn't null-terminated
     if (err)
     {
       Serial.print(F("deserializeJson() failed with code "));

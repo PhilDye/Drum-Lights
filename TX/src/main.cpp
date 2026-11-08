@@ -194,8 +194,7 @@ const size_t STATE_MSG_SIZE = 128; // room for the fields below plus a long git 
 
 size_t buildStateMessage(char *msg, size_t msgSize)
 {
-  const size_t size = JSON_OBJECT_SIZE(5);
-  StaticJsonDocument<size> json;
+  JsonDocument json;
   json["mode"] = CurrentMode;
   json["auto"] = autoDelay.isRunning();
   json["proto"] = PROTOCOL_VERSION;
@@ -369,8 +368,7 @@ void handleWSMessage(void *arg, uint8_t *data, size_t len)
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT)
   {
 
-    const size_t size = JSON_OBJECT_SIZE(1);
-    StaticJsonDocument<size> json;
+    JsonDocument json;
     DeserializationError err = deserializeJson(json, data, len); // data isn't null-terminated
     if (err)
     {

@@ -38,7 +38,7 @@ Both TX and RX are powered by portable USB battery packs ('power banks'), typica
 
 ## Transmitter
 
-The transmitter (TX) consists of an ESP32-S3 dev-kit board plus a RF24-based radio module, mounted on proto-board. The original design used a classic ESP32 dev-kit; that build is still supported (web UI only, see below) but new transmitters should use the S3, because the classic ESP32's Bluetooth connects too slowly and unreliably for live use (8/10 connections at 4.4s, against 20/20 at 1.0s on the S3; see #19).
+The transmitter (TX) consists of an ESP32-S3 dev-kit board plus a RF24-based radio module, mounted on proto-board. The original design used a classic ESP32 dev-kit; that build is still supported (web UI only, see below) but new transmitters should use the S3, because the classic ESP32's Bluetooth connects too slowly and unreliably for live use (see #19).
 
 Although the RF24 modules use the 2.4Ghz ISM radio band, they are not WiFi; this was chosen for low-latency and avoiding the need for a network router for a large number of receivers (which would not be able to connect simultaneously to the ESP32 hotspot).
 

@@ -99,6 +99,18 @@ The native iPhone app in [`iOS/`](iOS/README.md) is the preferred controller. It
 
 The app shows "Sent to TX" rather than "Delivered": the TX confirms it accepted a command, but nothing can confirm the drums received it. While disconnected the controls dim and ignore taps, rather than queuing stale commands.
 
+| Live | Settings |
+| :---: | :---: |
+| <img src="_docs/iOS-live.png" width="260" alt="iOS app Live tab: connection status, animated ring preview, effect tabs, colour swatches, Off, Strobe and Auto"> | <img src="_docs/iOS-settings.png" width="260" alt="iOS app Settings sheet: transmitter, WiFi fallback, haptics, strobe repeat rate, catalogue and firmware versions"> |
+
+Planned, from the same design:
+
+| Palettes | Lock screen |
+| :---: | :---: |
+| <img src="_docs/iOS-palettes.png" width="260" alt="Planned Palettes tab: shortlists of patterns to jump between"> | <img src="_docs/iOS-lockscreen.png" width="260" alt="Planned lock-screen Live Activity with palette tiles and Strobe"> |
+
+_Screens are from the design mockup; the built app follows it closely but may differ in detail._
+
 Currently the Live tab and Settings work. Saved palettes, Live Activity / lock-screen controls, App Intents (Action Button, Shortcuts) and Apple Watch are planned; see [iOS/DESIGN.md](iOS/DESIGN.md) and #20. Build and test instructions are in [iOS/README.md](iOS/README.md). It needs iOS 17 or later; in the Simulator it drives a pretend TX.
 
 ### Web UI (fallback)
